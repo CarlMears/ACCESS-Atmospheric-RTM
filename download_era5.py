@@ -37,6 +37,37 @@ c = cdsapi.Client(url=CDS_URL, key=cds_key, verify=True)
 d = date(2020, 1, 1)
 out_file = Path(f"era5_{d.isoformat()}.nc")
 
+# These pressure levels (in hPa) are the same as the NCEP GDAS data but is a
+# subset of the available ERA5 levels
+LEVELS = [
+    "1000",
+    "975",
+    "950",
+    "925",
+    "900",
+    "850",
+    "800",
+    "750",
+    "700",
+    "650",
+    "600",
+    "550",
+    "500",
+    "450",
+    "400",
+    "350",
+    "300",
+    "250",
+    "200",
+    "150",
+    "100",
+    "70",
+    "50",
+    "30",
+    "20",
+    "10",
+]
+
 if not out_file.exists():
     c.retrieve(
         "reanalysis-era5-pressure-levels",
@@ -44,7 +75,7 @@ if not out_file.exists():
             "product_type": "reanalysis",
             "format": "netcdf",
             "variable": ["temperature", "specific_humidity", "relative_humidity"],
-            "pressure_level": ["700", "1000"],
+            "pressure_level": LEVELS,
             "year": d.strftime("%Y"),
             "month": d.strftime("%m"),
             "day": d.strftime("%d"),
