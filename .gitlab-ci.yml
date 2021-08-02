@@ -1,0 +1,53 @@
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+format:
+  image: python:3.9-slim
+  cache:
+    paths:
+      - .cache/pip
+  before_script:
+    - python --version
+    - pip install --upgrade pip
+    - pip install --progress-bar=off black
+  script:
+    - black --check .
+
+lint:
+  image: python:3.9-slim
+  cache:
+    paths:
+      - .cache/pip
+  before_script:
+    - python --version
+    - pip install --upgrade pip
+    - pip install --progress-bar=off flake8 pycodestyle pydocstyle
+  script:
+    - flake8 --count .
+    - pycodestyle -v .
+    - pydocstyle -v .
+
+mypy:
+  image: python:3.9-slim
+  cache:
+    paths:
+      - .cache/pip
+  before_script:
+    - pip install --upgrade pip
+    - pip install --progress-bar=off lxml mypy
+  script:
+    - >
+      mypy --ignore-missing-imports --strict --pretty --show-error-context
+      --junit-xml mypy.junit.xml
+      --cobertura-xml-report .
+      --lineprecision-report .
+      ./
+  artifacts:
+    paths:
+      - mypy.junit.xml
+      - cobertura.xml
+      - lineprecision.txt
+    reports:
+      junit: mypy.junit.xml
+      cobertura: cobertura.xml
