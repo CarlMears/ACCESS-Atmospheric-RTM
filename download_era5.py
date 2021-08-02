@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Download the necessary ERA5 data to run the atmospheric RTM.
 
-The ERA5 dataset: https://doi.org/10.24381/cds.bd0915c6
+The ERA5 datasets:
+
+- https://doi.org/10.24381/cds.bd0915c6
+- https://doi.org/10.24381/cds.adbb2d47
 
 The API reference: https://cds.climate.copernicus.eu/api-how-to
 
@@ -12,33 +15,19 @@ with CDS, run this script with the following two environment variables set:
 - CDS_API_KEY
 """
 
+import argparse
 import os
-import sys
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import cdsapi
 
+# CDS API
 CDS_URL = "https://cds.climate.copernicus.eu/api/v2"
-try:
-    cds_uid = os.environ["CDS_UID"]
-    cds_api_key = os.environ["CDS_API_KEY"]
-except KeyError:
-    print(
-        "For CDS authentication, both 'CDS_UID' and "
-        "'CDS_API_KEY' environment variables must be set"
-    )
-    sys.exit(1)
 
-cds_key = ":".join([cds_uid, cds_api_key])
-
-c = cdsapi.Client(url=CDS_URL, key=cds_key, verify=True)
-
-d = date(2020, 1, 1)
-out_file = Path(f"era5_{d.isoformat()}.nc")
-
-# These pressure levels (in hPa) are the same as the NCEP GDAS data but is a
-# subset of the available ERA5 levels
+# These pressure levels (in hPa) are the same as the NCEP GDAS data but they are
+# a subset of the available ERA5 levels. (In other words, more could be added if
+# desired.)
 LEVELS = [
     "1000",
     "975",
@@ -68,21 +57,97 @@ LEVELS = [
     "10",
 ]
 
-if not out_file.exists():
-    c.retrieve(
-        "reanalysis-era5-pressure-levels",
-        {
-            "product_type": "reanalysis",
-            "format": "netcdf",
-            "variable": ["temperature", "specific_humidity", "relative_humidity"],
-            "pressure_level": LEVELS,
-            "year": d.strftime("%Y"),
-            "month": d.strftime("%m"),
-            "day": d.strftime("%d"),
-            "time": ["00:00", "12:00"],
-        },
-        str(out_file),
+# The ERA5 variables for the pressure-level analysis product
+ATM_VARIABLES = [
+    "temperature",
+    "geopotential",
+    "relative_humidity",
+]
+
+
+# The ERA5 variables for the surface-level analysis product
+SURFACE_VARIABLES = [
+    "surface_pressure",
+    "total_column_cloud_liquid_water",
+    "total_column_water_vapour",
+]
+
+
+def main() -> None:
+    """Parse arguments and download the data."""
+    parser = argparse.ArgumentParser(description="Download relevant ERA5 data")
+    parser.add_argument("start_date", type=date.fromisoformat, help="starting day")
+    parser.add_argument("end_date", type=date.fromisoformat, help="ending day")
+    parser.add_argument(
+        "--out-dir",
+        type=Path,
+        default=Path.cwd(),
+        metavar="DIR",
+        help="directory to write files",
     )
-    print(f"Data downloaded: {out_file}")
-else:
-    print(f"File already exists: {out_file}")
+    args = parser.parse_args()
+
+    if args.end_date < args.start_date:
+        parser.error("Ending date must be after starting date")
+
+    try:
+        cds_uid = os.environ["CDS_UID"]
+        cds_api_key = os.environ["CDS_API_KEY"]
+    except KeyError:
+        parser.exit(
+            1,
+            "For CDS authentication, both 'CDS_UID' and "
+            "'CDS_API_KEY' environment variables must be set",
+        )
+
+    cds_key = ":".join([cds_uid, cds_api_key])
+    c = cdsapi.Client(url=CDS_URL, key=cds_key, verify=True)
+
+    cur_day: date = args.start_date
+    end_day: date = args.end_date
+    while cur_day <= end_day:
+        out_levels = Path(f"era5_levels_{cur_day.isoformat()}.nc")
+        out_surface = Path(f"era5_surface_{cur_day.isoformat()}.nc")
+
+        if not out_levels.exists():
+            c.retrieve(
+                "reanalysis-era5-pressure-levels",
+                {
+                    "product_type": "reanalysis",
+                    "format": "netcdf",
+                    "variable": ATM_VARIABLES,
+                    "pressure_level": LEVELS,
+                    "year": cur_day.strftime("%Y"),
+                    "month": cur_day.strftime("%m"),
+                    "day": cur_day.strftime("%d"),
+                    "time": ["00:00", "12:00"],
+                },
+                str(out_levels),
+            )
+            print(f"Data downloaded: {out_levels}")
+        else:
+            print(f"File already exists: {out_levels}")
+
+        if not out_surface.exists():
+            c.retrieve(
+                "reanalysis-era5-single-levels",
+                {
+                    "product_type": "reanalysis",
+                    "format": "netcdf",
+                    "variable": SURFACE_VARIABLES,
+                    "year": cur_day.strftime("%Y"),
+                    "month": cur_day.strftime("%m"),
+                    "day": cur_day.strftime("%d"),
+                    "time": ["00:00", "12:00"],
+                },
+                str(out_surface),
+            )
+            print(f"Data downloaded: {out_surface}")
+        else:
+            print(f"File already exists: {out_surface}")
+
+        cur_day += timedelta(days=1)
+
+
+if __name__ == "__main__":
+    main()
