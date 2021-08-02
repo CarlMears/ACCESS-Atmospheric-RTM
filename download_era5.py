@@ -72,6 +72,9 @@ SURFACE_VARIABLES = [
     "total_column_water_vapour",
 ]
 
+# The hours per day to download
+HOURS = ["00:00", "12:00"]
+
 
 def main() -> None:
     """Parse arguments and download the data."""
@@ -106,47 +109,51 @@ def main() -> None:
     cur_day: date = args.start_date
     end_day: date = args.end_date
     while cur_day <= end_day:
-        out_levels = Path(f"era5_levels_{cur_day.isoformat()}.nc")
-        out_surface = Path(f"era5_surface_{cur_day.isoformat()}.nc")
-
-        if not out_levels.exists():
-            c.retrieve(
-                "reanalysis-era5-pressure-levels",
-                {
-                    "product_type": "reanalysis",
-                    "format": "netcdf",
-                    "variable": ATM_VARIABLES,
-                    "pressure_level": LEVELS,
-                    "year": cur_day.strftime("%Y"),
-                    "month": cur_day.strftime("%m"),
-                    "day": cur_day.strftime("%d"),
-                    "time": ["00:00", "12:00"],
-                },
-                str(out_levels),
-            )
-            print(f"Data downloaded: {out_levels}")
-        else:
-            print(f"File already exists: {out_levels}")
-
-        if not out_surface.exists():
-            c.retrieve(
-                "reanalysis-era5-single-levels",
-                {
-                    "product_type": "reanalysis",
-                    "format": "netcdf",
-                    "variable": SURFACE_VARIABLES,
-                    "year": cur_day.strftime("%Y"),
-                    "month": cur_day.strftime("%m"),
-                    "day": cur_day.strftime("%d"),
-                    "time": ["00:00", "12:00"],
-                },
-                str(out_surface),
-            )
-            print(f"Data downloaded: {out_surface}")
-        else:
-            print(f"File already exists: {out_surface}")
-
+        download_day(c, cur_day, args.out_dir)
         cur_day += timedelta(days=1)
+
+
+def download_day(client: cdsapi.Client, cur_day: date, out_dir: Path) -> None:
+    """Download the ERA5 datasets of interest for a single day."""
+    out_surface = out_dir / Path(f"era5_surface_{cur_day.isoformat()}.nc")
+    out_levels = out_dir / Path(f"era5_levels_{cur_day.isoformat()}.nc")
+
+    if not out_surface.exists():
+        client.retrieve(
+            "reanalysis-era5-single-levels",
+            {
+                "product_type": "reanalysis",
+                "format": "netcdf",
+                "variable": SURFACE_VARIABLES,
+                "time": HOURS,
+                "year": cur_day.strftime("%Y"),
+                "month": cur_day.strftime("%m"),
+                "day": cur_day.strftime("%d"),
+            },
+            str(out_surface),
+        )
+        print(f"Data downloaded: {out_surface}")
+    else:
+        print(f"File already exists: {out_surface}")
+
+    if not out_levels.exists():
+        client.retrieve(
+            "reanalysis-era5-pressure-levels",
+            {
+                "product_type": "reanalysis",
+                "format": "netcdf",
+                "variable": ATM_VARIABLES,
+                "pressure_level": LEVELS,
+                "time": HOURS,
+                "year": cur_day.strftime("%Y"),
+                "month": cur_day.strftime("%m"),
+                "day": cur_day.strftime("%d"),
+            },
+            str(out_levels),
+        )
+        print(f"Data downloaded: {out_levels}")
+    else:
+        print(f"File already exists: {out_levels}")
 
 
 if __name__ == "__main__":
