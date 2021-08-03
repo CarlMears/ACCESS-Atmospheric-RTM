@@ -1,9 +1,9 @@
-program generate_standard_scenes
+program access_rtm
   use, intrinsic :: iso_fortran_env, only: ERROR_UNIT
   use standard_scene, only: daily_scene_data, write_scene
   implicit none
 
-  character(len=*), parameter :: PROG_NAME = "generate_standard_scenes"
+  character(len=*), parameter :: PROG_NAME = "access_rtm"
 
   character(len=120) :: filename_out
   integer :: year, doy
@@ -97,4 +97,4 @@ contains
     write (*, *) "   -V, --version   show the version info and exit"
   end subroutine print_help
 
-end program generate_standard_scenes
+end program access_rtm
