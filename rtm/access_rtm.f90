@@ -12,13 +12,10 @@ program access_rtm
   ! ----------------------------------------------------------------------
   call parse_args(year, doy, filename_out)
 
-  write (*,*) "Program: ", PROG_NAME
-  write (*,'(" Generating standard scenes for: ", i4.4, "-", i3.3)') year, doy
-
-  write (*, *) "Building inputs and applying RTM"
+  write (*,'(" Applying RTM using ERA5 data for: ", i4.4, "-", i3.3)') year, doy
   call data%load(year, doy)
 
-  write (*, *) "Interpolating data and writing output: ", filename_out
+  write (*, *) "Writing output: ", filename_out
   call write_scene(data, filename_out)
 
   call data%free()
@@ -85,12 +82,12 @@ contains
     write (*, *) " usage: " // PROG_NAME // " [-h] [-V] " &
          // "year doy out_file"
     write (*, *)
-    write (*, *) " Generate MWI standard scenes for one day"
+    write (*, *) " Apply RTM for ACCESS for one day of ERA5 data"
     write (*, *)
     write (*, *) " positional arguments:"
     write (*, *) "   year      Year to use for geophysical input data"
     write (*, *) "   doy       Ordinal day for geophysical input data"
-    write (*, *) "   out_file  Output file to write (HDF5 format)"
+    write (*, *) "   out_file  Output file to write (netCDF format)"
     write (*, *)
     write (*, *) " optional arguments:"
     write (*, *) "   -h, --help      show this help message and exit"

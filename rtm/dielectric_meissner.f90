@@ -22,7 +22,6 @@ contains
   !   eps    complex dielectric constant
   !          negative imaginary part to be consistent with wentz1 conventionc
   !
-  !
   pure subroutine  meissner(freq,t,s,   eps)
     real(real32), intent(in) :: freq,t,s
     complex(real32), intent(out) :: eps

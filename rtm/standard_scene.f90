@@ -5,13 +5,15 @@ module standard_scene
   use cloud_abs, only: fdcldabs
   use find_abs_coeff, only: fdabscoeff
   use month_day, only: find_month_day
-  use ncep, only: findncep
+  ! use ncep, only: findncep
   use netcdf
   implicit none
   private
   public :: write_scene, daily_scene_data
 
-  integer, parameter :: NUM_HR = 4, NUM_FREQ = 6
+  ! Number of hours used per day (TODO: probably increase to 24 later)
+  integer, parameter :: NUM_HR = 2
+  integer(int32), dimension(NUM_HR), parameter :: HOURS = [0, 12]
 
   ! All data is on a 0.25-degree grid
   integer, parameter :: NUM_LAT = 721, NUM_LON = 1440
@@ -20,6 +22,10 @@ module standard_scene
 
   ! Nominal Earth incidence angle in degrees
   real(real32), parameter :: EIA_NOMINAL = 53.
+
+  ! Frequencies (in GHz) to use
+  integer, parameter :: NUM_FREQ = 5
+  real(real32), dimension(NUM_FREQ), parameter :: FREQS = [10.85, 18.85, 23.8, 36.75, 37.3]
 
   ! Daily scene data
   type daily_scene_data
@@ -61,8 +67,8 @@ contains
 
     self%year = year
     self%doy = doy
-    self%hour = [0, 6, 12, 18]
-    self%freq = [10.85, 18.85, 23.8, 36.75, 37.3, 89.]
+    self%hour = HOURS
+    self%freq = FREQS
     self%pol = [1, 2]
     self%lat = [(LAT0 + DLAT * ilat, ilat = 0, NUM_LAT - 1)]
     self%lon = [(LON0 + DLON * ilon, ilon = 0, NUM_LON - 1)]
@@ -76,8 +82,8 @@ contains
     call find_month_day(year, doy, month, day)
 
     ! Read ERA5 surface/profile data and apply the RTM
-    do ihour = 1, 4
-       write (*, '("   surface/profile and RTM, hour ", i0, "/4")') ihour
+    do ihour = 1, NUM_HR
+       write (*, '("   surface/profile and RTM, hour ", i0, "/", i0)') ihour, NUM_HR
        do ilat = 1, NUM_LAT
           do ilon = 1, NUM_LON
              lat = real(self%lat(ilat), real32)
