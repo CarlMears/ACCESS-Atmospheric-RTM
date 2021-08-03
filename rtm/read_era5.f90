@@ -1,6 +1,7 @@
 ! Read the ERA5 surface/profile netCDF files
 module read_era5
-  use, intrinsic :: iso_fortran_env, only: real32, int32, ERROR_UNIT
+  use, intrinsic :: iso_fortran_env, only: real32, int16, int32, ERROR_UNIT
+  use, intrinsic :: ieee_arithmetic, only: ieee_value, ieee_quiet_nan
   use netcdf
   implicit none
   private
@@ -52,12 +53,19 @@ module read_era5
 
 contains
 
+! -------------------------------------------------------------------------------
   subroutine read_era5_data(self, filename_profiles, filename_surface)
     class(Era5DailyData), intent(inout) :: self
     character(len=*), intent(in) :: filename_profiles, filename_surface
 
     integer :: ncid, varid
     integer :: lat_len, lon_len, level_len, time_len
+    integer(int16), dimension(:, :, :, :), allocatable :: packed_short_4d
+    integer(int16), dimension(:, :, :), allocatable :: packed_short_3d
+
+    ! The reciprocal of the standard gravity, in units of s^2 / m
+    ! https://en.wikipedia.org/wiki/Standard_gravity
+    real(real32), parameter :: INV_STANDARD_GRAVITY = 1 / 9.80665
 
     call check_nc(nf90_open(filename_profiles, NF90_NOWRITE, ncid))
     lat_len = dim_len(ncid, "latitude")
@@ -89,6 +97,7 @@ contains
         self%surface_pressure(lon_len, lat_len, time_len))
     end if
 
+    ! Read the coordinate variables
     call check_nc(nf90_inq_varid(ncid, "longitude", varid))
     call check_nc(nf90_get_var(ncid, varid, self%lons))
 
@@ -101,14 +110,35 @@ contains
     call check_nc(nf90_inq_varid(ncid, "time", varid))
     call check_nc(nf90_get_var(ncid, varid, self%time))
 
-    ! TODO: read remaining data
+    ! The remaining data is packed, so allocate a temporary working array and
+    ! unpack the data
+    allocate(packed_short_4d(lon_len, lat_len, level_len, time_len))
+    call unpack_variable_4d(ncid, "t", packed_short_4d, self%temperature)
+    call unpack_variable_4d(ncid, "r", packed_short_4d, self%relative_humidity)
+    call unpack_variable_4d(ncid, "z", packed_short_4d, self%height)
+    deallocate(packed_short_4d)
+
+    ! Convert geopotential to geopotential height
+    ! (https://apps.ecmwf.int/codes/grib/param-db?id=129)
+    self%height = self%height * INV_STANDARD_GRAVITY
 
     call check_nc(nf90_close(ncid))
 
     call check_nc(nf90_open(filename_surface, NF90_NOWRITE, ncid))
+    ! Perhaps the lat/lon/time should be checked to ensure it matches...but for
+    ! now we'll just be really trusting
+
+    allocate(packed_short_3d(lon_len, lat_len, time_len))
+    call unpack_variable_3d(ncid, "sp", packed_short_3d, self%surface_pressure)
+    deallocate(packed_short_3d)
+
+    ! Convert surface pressure from Pa to hPa
+    self%surface_pressure = self%surface_pressure * 1e-2
+
     call check_nc(nf90_close(ncid))
   end subroutine read_era5_data
 
+  ! -------------------------------------------------------------------------------
   subroutine free_era5_data(self)
     type(Era5DailyData), intent(inout) :: self
 
@@ -116,6 +146,62 @@ contains
       self%temperature, self%relative_humidity, self%height, &
       self%surface_pressure)
   end subroutine free_era5_data
+
+  ! -------------------------------------------------------------------------------
+  subroutine unpack_variable_3d(ncid, varname, packed_short, unpacked_float)
+    integer, intent(in) :: ncid
+    character(len=*), intent(in) :: varname
+    integer(int16), dimension(:, :, :), intent(inout) :: packed_short
+    real(real32), dimension(:, :, :), intent(out) :: unpacked_float
+
+    integer :: varid, no_fill
+    real(real32) :: scale_factor, add_offset
+    integer(int16) :: fill_value
+
+    ! Read the packed data
+    call check_nc(nf90_inq_varid(ncid, varname, varid))
+    call check_nc(nf90_get_var(ncid, varid, packed_short))
+
+    ! Get the needed attributes
+    call check_nc(nf90_inq_var_fill(ncid, varid, no_fill, fill_value))
+    call check_nc(nf90_get_att(ncid, varid, "scale_factor", scale_factor))
+    call check_nc(nf90_get_att(ncid, varid, "add_offset", add_offset))
+
+    ! And unpack the data
+    where (packed_short /= fill_value)
+      unpacked_float = real(packed_short, real32) * scale_factor + add_offset
+    elsewhere
+      unpacked_float = ieee_value(0._real32, ieee_quiet_nan)
+    end where
+  end subroutine unpack_variable_3d
+
+  ! -------------------------------------------------------------------------------
+  subroutine unpack_variable_4d(ncid, varname, packed_short, unpacked_float)
+    integer, intent(in) :: ncid
+    character(len=*), intent(in) :: varname
+    integer(int16), dimension(:, :, :, :), intent(inout) :: packed_short
+    real(real32), dimension(:, :, :, :), intent(out) :: unpacked_float
+
+    integer :: varid, no_fill
+    real(real32) :: scale_factor, add_offset
+    integer(int16) :: fill_value
+
+    ! Read the packed data
+    call check_nc(nf90_inq_varid(ncid, varname, varid))
+    call check_nc(nf90_get_var(ncid, varid, packed_short))
+
+    ! Get the needed attributes
+    call check_nc(nf90_inq_var_fill(ncid, varid, no_fill, fill_value))
+    call check_nc(nf90_get_att(ncid, varid, "scale_factor", scale_factor))
+    call check_nc(nf90_get_att(ncid, varid, "add_offset", add_offset))
+
+    ! And unpack the data
+    where (packed_short /= fill_value)
+      unpacked_float = real(packed_short, real32) * scale_factor + add_offset
+    elsewhere
+      unpacked_float = ieee_value(0._real32, ieee_quiet_nan)
+    end where
+  end subroutine unpack_variable_4d
 
   ! -------------------------------------------------------------------------------
   ! Query the dimension length
