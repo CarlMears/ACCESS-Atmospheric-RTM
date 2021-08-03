@@ -15,13 +15,16 @@ module read_era5
     ! Lengths of the dimensions
     integer(int32) :: num_time, num_lats, num_lons, num_levels
 
-    ! Pressure level in hPa, dimensioned as num_levels
+    ! Pressure level in hPa, dimensioned as num_levels. They should be in
+    ! descending order (e.g., 1000 to 10).
     integer(int32), dimension(:), allocatable :: levels
 
-    ! Latitude in degrees North, dimensioned as num_lats
+    ! Latitude in degrees North, dimensioned as num_lats. They should be in
+    ! ascending order (e.g., -90 to 90).
     real(real32), dimension(:), allocatable :: lats
 
-    ! Longitude in degrees East, dimensioned as num_lons
+    ! Longitude in degrees East, dimensioned as num_lons. They should be in
+    ! ascending order (e.g., -180 to 180).
     real(real32), dimension(:), allocatable :: lons
 
     ! Hours since 1900-01-01, dimensioned as num_time
@@ -117,11 +120,6 @@ contains
     call unpack_variable_4d(ncid, "r", packed_short_4d, self%relative_humidity)
     call unpack_variable_4d(ncid, "z", packed_short_4d, self%height)
     deallocate(packed_short_4d)
-
-    ! Convert geopotential to geopotential height
-    ! (https://apps.ecmwf.int/codes/grib/param-db?id=129)
-    self%height = self%height * INV_STANDARD_GRAVITY
-
     call check_nc(nf90_close(ncid))
 
     call check_nc(nf90_open(filename_surface, NF90_NOWRITE, ncid))
@@ -131,11 +129,26 @@ contains
     allocate(packed_short_3d(lon_len, lat_len, time_len))
     call unpack_variable_3d(ncid, "sp", packed_short_3d, self%surface_pressure)
     deallocate(packed_short_3d)
+    call check_nc(nf90_close(ncid))
+
+    ! Convert geopotential to geopotential height
+    ! (https://apps.ecmwf.int/codes/grib/param-db?id=129)
+    self%height = self%height * INV_STANDARD_GRAVITY
 
     ! Convert surface pressure from Pa to hPa
     self%surface_pressure = self%surface_pressure * 1e-2
 
-    call check_nc(nf90_close(ncid))
+    ! The latitudes/longitudes need to be adjusted. In the ERA5 files, the
+    ! latitudes are in *descending* order from 90 to -90, and while the longitudes
+    ! are in ascending order, they go from 0 to 360. The desired output is that
+    ! the latitudes go from -90 to 90 and longitudes from -180 to 180.
+    self%lats = -self%lats
+    self%lons = self%lons - 180.
+    ! Flip latitudes and shift longitudes
+    self%temperature = cshift(self%temperature(:, lat_len:1:-1, :, :), lon_len / 2, 1)
+    self%relative_humidity = cshift(self%relative_humidity(:, lat_len:1:-1, :, :), lon_len / 2, 1)
+    self%height = cshift(self%height(:, lat_len:1:-1, :, :), lon_len / 2, 1)
+    self%surface_pressure = cshift(self%surface_pressure(:, lat_len:1:-1, :), lon_len / 2, 1)
   end subroutine read_era5_data
 
   ! -------------------------------------------------------------------------------

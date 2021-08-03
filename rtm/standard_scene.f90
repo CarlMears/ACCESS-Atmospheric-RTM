@@ -114,6 +114,12 @@ contains
             !     self%tb_up(ilon, ilat, ifreq, ihour) = tb_up
             !     self%tb_down(ilon, ilat, ifreq, ihour) = tb_down
             !  end do
+
+            ! TODO: as a temporary check, write a few ERA5 values to the outputs
+            self%col_water(ilon, ilat, ihour) = era5_data%surface_pressure(ilon, ilat, ihour)
+            self%col_vapor(ilon, ilat, ihour) = era5_data%height(ilon, ilat, 1, ihour)
+            self%tran(ilon, ilat, 1, ihour) = era5_data%temperature(ilon, ilat, 1, ihour)
+            self%tb_up(ilon, ilat, 1, ihour) = era5_data%relative_humidity(ilon, ilat, 1, ihour)
           end do
        end do
     end do
