@@ -1,9 +1,7 @@
 module standard_scene
   use, intrinsic :: iso_fortran_env, only: int32, real32, real64, ERROR_UNIT
   use, intrinsic :: ieee_arithmetic, only: ieee_value, ieee_quiet_nan
-  use atmos_tables, only: atm_tran
-  use cloud_abs, only: fdcldabs
-  use find_abs_coeff, only: fdabscoeff
+  use atms_abs_routines, only: atm_tran, fdcldabs, fdabscoeff
   use month_day, only: find_month_day
   ! use ncep, only: findncep
   use netcdf
@@ -284,9 +282,6 @@ contains
   end subroutine handle_nc_err
 
   ! Apply the RTM to obtain atmospheric terms
-  !
-  ! This is basically the same thing as atmos_tables::get_atm but
-  ! without the lat/lon dependence.
   subroutine atmo_params(colvap, pwat, p, t, pv, rhol, z, ibegin, &
        eia, freq, tran, tb_up, tb_down)
     real(real32), intent(in) :: colvap, pwat

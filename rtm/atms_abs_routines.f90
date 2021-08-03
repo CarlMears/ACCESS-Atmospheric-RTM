@@ -8,9 +8,11 @@
 
 module atms_abs_routines
   use, intrinsic :: iso_fortran_env, only: real32, int32, real64
+  use dielectric_meissner, only: meissner
+  use trig_degrees, only: cosd
   implicit none
   private
-  public :: fdabsoxy_1992_modified, abh2o_rk_modified
+  public :: fdabsoxy_1992_modified, abh2o_rk_modified, atm_tran, fdabscoeff, fdcldabs
 
 contains
 
@@ -284,5 +286,110 @@ contains
 
     gamh2o=0.1820*freq*sftot
   end subroutine abh2o_rk_modified
+
+  !   compute atmospheric downwelling and upwelling brightness temperatures
+  !   and upward transmittance at each pressure level (altitude)
+
+  !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+  !   input:
+  !     nlev           number of atmosphere levels
+  !     tht            earth incidence angle [in deg]
+  !     tabs(0:nlev)   atmosphric absorptrion coefficients [nepers/m]
+  !     t(0:nlev)      temperature profile[in k]
+  !   z(0:nlev)      elevation (m)
+
+
+  !     output:
+  !     tran          total atmospheric transmission
+  !     tbdw          downwelling brightness temperature t_bd [in k]
+  !     tbup          upwelling   brightness temperature t_bu [in k]
+  !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+
+  pure subroutine atm_tran(nlev,tht,t,z,tabs,  tran,tbdw,tbup)
+    integer(int32), intent(in) :: nlev
+    real(real32), intent(in) :: tht
+    real(real32), dimension(0:nlev), intent(in) :: t, z, tabs
+    real(real32), intent(out) :: tran, tbdw, tbup
+
+    ! real(real32), parameter :: re=6378.135
+    real(real32), parameter :: delta=0.00035
+
+    integer(int32) :: i
+    real(real32) :: opacty(nlev),tavg(nlev),ems(nlev)
+    real(real32) :: sumop, sumdw, sumup, tbavg, dsdh
+
+    dsdh = (1.0+delta)/sqrt(cosd(tht)**2 + delta*(2+delta))
+
+    do i=1,nlev
+       opacty(i)=-dsdh*0.5*(tabs(i-1)+tabs(i))*(z(i)-z(i-1))
+       tavg(i)  =0.5*(t(i-1)+t(i))
+       ems(i)   =1.-exp(opacty(i))
+    enddo
+
+    sumop=0
+    sumdw=0
+    do i=1,nlev
+       sumdw=sumdw+(tavg(i)-t(1))*ems(i)*exp(sumop)
+       sumop=sumop+opacty(i)
+    enddo
+
+    sumop=0
+    sumup=0.
+    do i=nlev,1,-1
+       sumup=sumup+(tavg(i)-t(1))*ems(i)*exp(sumop)
+       sumop=sumop+opacty(i)
+    enddo
+
+    tran=exp(sumop)
+    tbavg=(1.-tran)*t(1)
+    tbdw=tbavg+sumdw
+    tbup=tbavg+sumup
+  end subroutine atm_tran
+
+  !   input:
+  !     oxygen absorption from rosenkranz
+  !     freq  frequency [in ghz]
+  !     p      pressure [in h pa]
+  !     t      temperature [in k]
+  !     pv     water vapor pressure  [in hpa]
+  !
+  !     output:
+  !     av          water vapor absorption coefficients [neper/km]
+  !     ao          oxygen absortption coefficient        [neper/km]
+  subroutine fdabscoeff(freq,p,t,pv, av,ao)
+    real(real32), intent(in) :: freq,p,t,pv
+    real(real32), intent(out) :: av,ao
+
+    real(real32), parameter :: nep_scale = 0.1 * log(10.0)
+    real(real32) gamoxy,gamh2o
+
+    call fdabsoxy_1992_modified(p,t,pv,freq, gamoxy)
+    call abh2o_rk_modified(p,t,pv,freq, gamh2o)
+
+    ! The result values above are in dB/km, so convert to Np/km
+    ao=nep_scale * gamoxy
+    av=nep_scale * gamh2o
+  end subroutine fdabscoeff
+
+  !     liquid cloud water absorption
+  !     rayleigh
+  !     freq:      frequency [ghz]
+  !     t:         temperature [k]
+  !     rhol:      liquid cloud water density [g/m**3]
+  !     output:
+  !     al:        cloud water absorption coefficient [neper/km]
+  pure subroutine fdcldabs(freq,t,rhol,   al)
+    real(real32), intent(in) :: freq, t, rhol
+    real(real32), intent(out) :: al
+    real(real32) :: rhol0, wavlen
+    real(real32), parameter :: c=29.979, pi=3.14159
+    complex(real32) :: permit
+
+    rhol0 = 1.0e-6*rhol ![g/cm**3]
+    call meissner(freq,t,0.0,   permit)
+    wavlen = c/freq
+    al = (6.0*pi*rhol0/wavlen)*aimag((1.0-permit)/(2.0+permit))  ! nepers/cm
+    al = 1.0e5*al ! nepers/km
+  end subroutine fdcldabs
 
 end module atms_abs_routines
