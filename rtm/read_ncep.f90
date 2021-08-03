@@ -251,7 +251,7 @@ contains
     end if
 
     call lookup_bin_inds_ncep(lat, lon, x0, x1, xd, y0, y1, yd)
-    ! TODO: use nint
+    if (abs(xd) > 1e-1 .or. abs(yd) > 1e-1) error stop "further from left edge than expected"
 
     do concurrent (ilevel=0:NMAX)
        t(ilevel) = cache%t_map(x0, y0, ilevel)
