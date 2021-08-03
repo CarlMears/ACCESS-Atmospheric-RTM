@@ -2,7 +2,7 @@ module wvap_convert
   use, intrinsic :: iso_fortran_env, only: real32
   implicit none
   private
-  public :: goff_gratch_vap
+  public :: goff_gratch_vap, buck_vap
 
 contains
   elemental subroutine goff_gratch_vap(T,RH,P,  P_V,rho_V)
@@ -39,4 +39,23 @@ contains
     P_v = P_s * RH* 0.01                                           !  mbar
     rho_v = ((F_w * P_v * eps) / (R_d * T)) * 1.E5  !  [g/m**3]
   end subroutine goff_gratch_vap
+
+  ! Use the Buck equation to convert relative humidity into water
+  ! vapor partial pressure. The equation is from [1], which cites Buck
+  ! 1996.
+  !
+  ! [1] https://en.wikipedia.org/wiki/Arden_Buck_equation
+  elemental subroutine buck_vap(temp, rh, pv)
+    real(real32), intent(in) :: temp ! temperature [K]
+    real(real32), intent(in) :: rh ! relative humidity [%]
+    real(real32), intent(out) :: pv ! water vapor partial pressure [hPa]
+
+    real(real32) :: ps ! saturation vapor pressure [hPa]
+    real(real32) :: temp_c ! temperature in degrees Celsius
+
+    temp_c = temp - 273.15
+    ps = 6.1121 * exp((18.678 - temp_c / 234.5) * (temp_c / (257.14 + temp_c)))
+    pv = ps * rh * 0.01
+  end subroutine buck_vap
+
 end module wvap_convert
