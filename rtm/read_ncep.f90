@@ -1,21 +1,4 @@
-!     12/10/2016 changed 8/22/2016.  this subroutine was modified so that it can do two years at once
-!     without excessive reads of the ncep data.  for the first call use standard lyear.
-!     for the second call append a minus sign to lyear.
-!     this change has not effect on previous or future usage of the routine
-
-!     same as 'o:\aquarius\mk_atmos_tables\findncep.f' dated march 4 2013 except this version does not call
-!     call sleepqq(10000) !wait 10 seconds for possible file download to complete
-
-
-!     03/04/2013
-!   changed path from Nasserver5 to ops1p
-!
-!     01/05/2006
-!     was: if t(ipr) < 100 k : ierr=-10, bail out
-!     changed: if t(ipr) < 100 k, set rhocwat=0.0
-!
-!     01/28/2003
-!     rhol = liquid cloud water density
+! Read NCEP GDAS data which is post-processed on the RSS filesystem
 !
 !     ordered ncep profiles, surtep, wind, pwat ,colvap
 !
@@ -27,8 +10,7 @@
 !     hour: uct hour
 !     lat: latitude  [between -90 and 90]
 !     lon: longitude   [between 0 and 360]
-
-
+!
 !    output:
 !     colvap: ncep water vapor integrated [mm]
 !     colwat: ncep columnar liquid cloud water integrated [mm]
@@ -42,7 +24,7 @@
 !     rhol: liquid water density [g /m**3]
 !     ibegin: index of surface level
 
-module ncep
+module read_ncep
   use, intrinsic :: iso_fortran_env, only: real32, real64, int32, ERROR_UNIT
   use wvap_convert, only: goff_gratch_vap
   use columnar_int, only: column
@@ -243,7 +225,7 @@ contains
   !           xlat   (latitude)                     real(4)
   !           xlon   (longitude)                    real(4)
   !
-  !    output: var (interpolated variable) real(4)
+  !    output: var (variable) real(4)
   !
 
   subroutine fnd_ncep(cache, year,month,day,hour,lat,lon,  t,hgt,rh,clwmr,p_sfc,pwat,cwat)
@@ -268,24 +250,19 @@ contains
             cache%p_sfc_map,cache%pwat_map,cache%cwat_map)
     end if
 
-    ! Bilinearly interpolate over lat/lon. The notation below is from:
-    ! https://en.wikipedia.org/wiki/Trilinear_interpolation
-    ! https://en.wikipedia.org/wiki/Linear_interpolation
-
     call lookup_bin_inds_ncep(lat, lon, x0, x1, xd, y0, y1, yd)
+    ! TODO: use nint
 
-    ! For each dataset, find the 4 neighboring values or profiles and
-    ! then apply the bilinear interpolation
     do concurrent (ilevel=0:NMAX)
-       t(ilevel) = interp_2d(cache%t_map(:,:,ilevel), x0, x1, xd, y0, y1, yd)
-       hgt(ilevel) = interp_2d(cache%hgt_map(:,:,ilevel), x0, x1, xd, y0, y1, yd)
-       rh(ilevel) = interp_2d(cache%rh_map(:,:,ilevel), x0, x1, xd, y0, y1, yd)
-       clwmr(ilevel) = interp_2d(cache%clwmr_map(:,:,ilevel), x0, x1, xd, y0, y1, yd)
+       t(ilevel) = cache%t_map(x0, y0, ilevel)
+       hgt(ilevel) = cache%hgt_map(x0, y0, ilevel)
+       rh(ilevel) = cache%rh_map(x0, y0, ilevel)
+       clwmr(ilevel) = cache%clwmr_map(x0, y0, ilevel)
     end do
 
-    p_sfc = interp_2d(cache%p_sfc_map, x0, x1, xd, y0, y1, yd)
-    pwat = interp_2d(cache%pwat_map, x0, x1, xd, y0, y1, yd)
-    cwat = interp_2d(cache%cwat_map, x0, x1, xd, y0, y1, yd)
+    p_sfc = cache%p_sfc_map(x0, y0)
+    pwat = cache%pwat_map(x0, y0)
+    cwat = cache%cwat_map(x0, y0)
 
   end subroutine fnd_ncep
 
@@ -437,33 +414,4 @@ contains
     end do cases
   end subroutine yread
 
-  ! Linear interpolation
-  !
-  ! t: ranges between 0 and 1
-  ! v0: value when t == 0
-  ! v1: value when t == 1
-  pure function lerp(v0, v1, t)
-    real(real32), intent(in) :: v0, v1, t
-    real(real32) :: lerp
-    lerp = (1 - t) * v0 + t * v1
-  end function lerp
-
-  ! 2D interpolation
-  pure function interp_2d(map, x0, x1, xd, y0, y1, yd)
-    real(real32), dimension(:, :), intent(in) :: map
-    integer(int32), intent(in) :: x0, x1, y0, y1
-    real(real32), intent(in) :: xd, yd
-    real(real32) :: interp_2d
-
-    real(real32) :: c00, c01, c10, c11, c0, c1
-
-    c00 = map(x0,y0)
-    c01 = map(x0,y1)
-    c10 = map(x1,y0)
-    c11 = map(x1,y1)
-    c0 = lerp(c00, c10, xd)
-    c1 = lerp(c01, c11, xd)
-    interp_2d = lerp(c0, c1, yd)
-  end function interp_2d
-
-end module ncep
+end module read_ncep

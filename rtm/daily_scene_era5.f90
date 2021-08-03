@@ -1,4 +1,4 @@
-module standard_scene
+module daily_scene_era5
   use, intrinsic :: iso_fortran_env, only: int32, real32, real64, ERROR_UNIT
   use, intrinsic :: ieee_arithmetic, only: ieee_value, ieee_quiet_nan
   use atms_abs_routines, only: atm_tran, fdcldabs, fdabscoeff
@@ -7,7 +7,7 @@ module standard_scene
   use netcdf
   implicit none
   private
-  public :: write_scene, daily_scene_data
+  public :: DailySceneDataEra5
 
   ! Number of hours used per day (TODO: probably increase to 24 later)
   integer, parameter :: NUM_HR = 2
@@ -22,11 +22,11 @@ module standard_scene
   real(real32), parameter :: EIA_NOMINAL = 53.
 
   ! Frequencies (in GHz) to use
-  integer, parameter :: NUM_FREQ = 5
-  real(real32), dimension(NUM_FREQ), parameter :: FREQS = [10.85, 18.85, 23.8, 36.75, 37.3]
+  integer, parameter :: NUM_FREQ = 4
+  real(real32), dimension(NUM_FREQ), parameter :: FREQS = [10.85, 18.85, 23.8, 36.75]
 
   ! Daily scene data
-  type daily_scene_data
+  type DailySceneDataEra5
      integer(int32) :: year
      integer(int32) :: doy
 
@@ -45,13 +45,15 @@ module standard_scene
 
    contains
      procedure :: load => read_daily_scene_data
-     procedure :: free => free_daily_scene_data
-  end type daily_scene_data
+     procedure :: save => write_scene
+     final :: free_daily_scene_data
+  end type DailySceneDataEra5
 
 contains
 
+  ! ----------------------------------------------------------------------  
   subroutine read_daily_scene_data(self, year, doy)
-    class(daily_scene_data), intent(inout) :: self
+    class(DailySceneDataEra5), intent(inout) :: self
     integer(int32), intent(in) :: year, doy
 
     integer :: ihour, ilat, ilon, ifreq
@@ -126,7 +128,7 @@ contains
   end subroutine read_daily_scene_data
 
   subroutine free_daily_scene_data(self)
-    class(daily_scene_data), intent(inout) :: self
+    type(DailySceneDataEra5), intent(inout) :: self
 
     deallocate(self%col_vapor, self%col_water, &
          self%tran, self%tb_up, self%tb_down)
@@ -140,9 +142,10 @@ contains
     self%doy = -1
   end subroutine free_daily_scene_data
 
+  ! ----------------------------------------------------------------------
   ! Write a day's standard scene data to a netCDF compatible file
   subroutine write_scene(scene, filename_out)
-    type(daily_scene_data), intent(in) :: scene
+    class(DailySceneDataEra5), intent(in) :: scene
     character(len=*), intent(in) :: filename_out
 
     integer :: ncid, varid
@@ -178,7 +181,7 @@ contains
     call get_command(cmdline)
     write(history, '(A24, " created: ", A)') timestamp, trim(cmdline)
 
-    call handle_nc_err(nf90_create(filename_out, ior(NF90_NOCLOBBER, NF90_NETCDF4), ncid))
+    call handle_nc_err(nf90_create(filename_out, ior(NF90_CLOBBER, NF90_NETCDF4), ncid))
 
     ! Define global attributes
     call handle_nc_err(nf90_put_att(ncid, NF90_GLOBAL, "Conventions", "CF-1.8,ACDD-1.3"))
@@ -287,6 +290,7 @@ contains
     call handle_nc_err(nf90_close(ncid))
   end subroutine write_scene
 
+  ! ----------------------------------------------------------------------
   ! This is a very simple netCDF error handler: if there's an error,
   ! then display it and exit with a nonzero code.
   subroutine handle_nc_err(status)
@@ -297,6 +301,7 @@ contains
     end if
   end subroutine handle_nc_err
 
+  ! ----------------------------------------------------------------------
   ! Apply the RTM to obtain atmospheric terms
   subroutine atmo_params(colvap, pwat, p, t, pv, rhol, z, ibegin, &
        eia, freq, tran, tb_up, tb_down)
@@ -335,4 +340,4 @@ contains
 
   end subroutine atmo_params
 
-end module standard_scene
+end module daily_scene_era5
