@@ -68,8 +68,11 @@ ATM_VARIABLES = [
 # The ERA5 variables for the surface-level analysis product
 SURFACE_VARIABLES = [
     "surface_pressure",
+    "geopotential",
     "total_column_cloud_liquid_water",
     "total_column_water_vapour",
+    "2m_temperature",
+    "2m_dewpoint_temperature",
 ]
 
 # The hours per day to download
