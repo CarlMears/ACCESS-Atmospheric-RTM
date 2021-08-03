@@ -4,6 +4,7 @@ module daily_scene_era5
   use atms_abs_routines, only: atm_tran, fdcldabs, fdabscoeff
   use month_day, only: find_month_day
   use read_era5, only: Era5DailyData
+  use wvap_convert, only: goff_gratch_vap
   use netcdf
   implicit none
   private
@@ -24,6 +25,9 @@ module daily_scene_era5
   ! Frequencies (in GHz) to use
   integer, parameter :: NUM_FREQ = 4
   real(real32), dimension(NUM_FREQ), parameter :: FREQS = [10.85, 18.85, 23.8, 36.75]
+
+  ! Maximum number of pressure levels to use
+  integer, parameter :: NMAX = 26
 
   ! Daily scene data
   type DailySceneDataEra5
@@ -51,7 +55,7 @@ module daily_scene_era5
 
 contains
 
-  ! ----------------------------------------------------------------------  
+  ! ----------------------------------------------------------------------
   subroutine read_daily_scene_data(self, year, doy)
     class(DailySceneDataEra5), intent(inout) :: self
     integer(int32), intent(in) :: year, doy
@@ -59,7 +63,6 @@ contains
     integer :: ihour, ilat, ilon, ifreq
     integer :: month, day
     integer :: ibegin
-    integer, parameter :: NMAX = 26
 
     real(real32), dimension(0:NMAX) :: p, t, pv, rhov, rhol, z
     real(real32) :: colvap, colwat, pwat, cwat
@@ -87,46 +90,43 @@ contains
     ! Read ERA5 surface/profile data for the day
     write (filename_profiles, '("era5_levels_", i4.4, "-", i2.2, "-", i2.2, ".nc")') year, month, day
     write (filename_surface, '("era5_surface_", i4.4, "-", i2.2, "-", i2.2, ".nc")') year, month, day
-    write (*, *) "Loading ERA5 profile data from: " // filename_profiles
-    write (*, *) "Loading ERA5 surface data from: " // filename_surface
+    write (*, *) "Loading ERA5 profile data from: " // trim(filename_profiles)
+    write (*, *) "Loading ERA5 surface data from: " // trim(filename_surface)
     call era5_data%load(filename_profiles, filename_surface)
 
     ! Apply the RTM
     do ihour = 1, NUM_HR
-       write (*, '("   surface/profile and RTM, hour ", i0, "/", i0)') ihour, NUM_HR
-       do ilat = 1, NUM_LAT
-          do ilon = 1, NUM_LON
-             lat = real(self%lat(ilat), real32)
-             lon = real(self%lon(ilon), real32)
-             if (lon < 0) lon = lon + 360
+      write (*, '("   surface/profile and RTM, hour ", i0, "/", i0)') ihour, NUM_HR
+      do ilat = 1, NUM_LAT
+        do ilon = 1, NUM_LON
+          lat = real(self%lat(ilat), real32)
+          lon = real(self%lon(ilon), real32)
+          if (lon < 0) lon = lon + 360
 
-            !  call findncep(year, month, day, (ihour - 1) * 6, &
-            !       lat, lon, &
-            !       colvap, colwat, pwat, cwat, p, t, pv, rhov, rhol, z, ibegin)
-            ! TODO: use ERA5 data instead
+          self%col_vapor(ilon, ilat, ihour) = era5_data%columnar_water_vapor(ilon, ilat, ihour)
+          self%col_water(ilon, ilat, ihour) = era5_data%columnar_cloud_liquid(ilon, ilat, ihour)
 
-            !  self%col_water(ilon, ilat, ihour) = colwat
-            !  self%col_vapor(ilon, ilat, ihour) = colvap
+          call prepare_parameters(era5_data, ilat, ilon, ihour, ibegin, p, t, pv, z)
 
-            !  do ifreq = 1, NUM_FREQ
-            !     call atmo_params(colvap, pwat, p, t, pv, rhol, z, ibegin, &
-            !          EIA_NOMINAL, real(self%freq(ifreq), real32), tran, tb_up, tb_down)
+          ! TODO: use ERA5 data instead
+          !  call findncep(year, month, day, (ihour - 1) * 6, &
+          !       lat, lon, &
+          !       colvap, colwat, pwat, cwat, p, t, pv, rhov, rhol, z, ibegin)
 
-            !     self%tran(ilon, ilat, ifreq, ihour) = tran
-            !     self%tb_up(ilon, ilat, ifreq, ihour) = tb_up
-            !     self%tb_down(ilon, ilat, ifreq, ihour) = tb_down
-            !  end do
+          !  do ifreq = 1, NUM_FREQ
+          !     call atmo_params(colvap, pwat, p, t, pv, rhol, z, ibegin, &
+          !          EIA_NOMINAL, real(self%freq(ifreq), real32), tran, tb_up, tb_down)
 
-            ! TODO: as a temporary check, write a few ERA5 values to the outputs
-            self%col_water(ilon, ilat, ihour) = era5_data%surface_pressure(ilon, ilat, ihour)
-            self%col_vapor(ilon, ilat, ihour) = era5_data%height(ilon, ilat, 1, ihour)
-            self%tran(ilon, ilat, 1, ihour) = era5_data%temperature(ilon, ilat, 1, ihour)
-            self%tb_up(ilon, ilat, 1, ihour) = era5_data%relative_humidity(ilon, ilat, 1, ihour)
-          end do
-       end do
+          !     self%tran(ilon, ilat, ifreq, ihour) = tran
+          !     self%tb_up(ilon, ilat, ifreq, ihour) = tb_up
+          !     self%tb_down(ilon, ilat, ifreq, ihour) = tb_down
+          !  end do
+        end do
+      end do
     end do
   end subroutine read_daily_scene_data
 
+  ! ----------------------------------------------------------------------
   subroutine free_daily_scene_data(self)
     type(DailySceneDataEra5), intent(inout) :: self
 
@@ -302,11 +302,53 @@ contains
   end subroutine handle_nc_err
 
   ! ----------------------------------------------------------------------
+  ! From the ERA5 data, prepare these profile/surface parameters for the RTM
+  subroutine prepare_parameters(era5_data, ilat, ilon, itime, ibegin, p, t, pv, z)
+    type(Era5DailyData), intent(in) :: era5_data
+    integer, intent(in) :: ilat, ilon, itime
+    integer, intent(out) :: ibegin
+    real(real32), dimension(0:NMAX), intent(out) :: p, t, pv, z
+
+    real(real32), dimension(0:NMAX) :: hgt, rh, rhov
+    integer :: ipr
+
+    p(0) = 0.
+    p(1:NMAX) = era5_data%levels(:)
+
+    t(0) = 0. ! TODO
+    t(1:NMAX) = era5_data%temperature(ilon, ilat, 1:NMAX, itime)
+
+    hgt(0) = 0. ! TODO
+    hgt(1:NMAX) = era5_data%height(ilon, ilat, 1:NMAX, itime)
+
+    rh(0) = 0. ! TODO
+    rh(1:NMAX) = era5_data%relative_humidity(ilon, ilat, 1:NMAX, itime)
+
+    ! Find "ibegin", or the starting index for the surface
+    ibegin = -1
+    do ipr = 1, NMAX
+      if (p(ipr) <= era5_data%surface_pressure(ilon, ilat, itime)) then
+        ibegin = ipr - 1
+        exit
+      end if
+    end do
+    if (ibegin < 0) error stop "Couldn't find ibegin"
+
+    p(ibegin) = era5_data%surface_pressure(ilon, ilat, itime)
+    t(ibegin) = t(0)
+    hgt(ibegin) = hgt(0)
+    rh(ibegin) = rh(0)
+    ! clwmr(ibegin) = clwmr(0)
+
+    ! find water vapor partial pressure and water vapor density
+    ! call goff_gratch_vap(t, rh, p, pv, rhov)
+  end subroutine prepare_parameters
+
+  ! ----------------------------------------------------------------------
   ! Apply the RTM to obtain atmospheric terms
   subroutine atmo_params(colvap, pwat, p, t, pv, rhol, z, ibegin, &
        eia, freq, tran, tb_up, tb_down)
     real(real32), intent(in) :: colvap, pwat
-    integer, parameter :: NMAX = 26
     real(real32), dimension(0:NMAX), intent(in) :: p, t, pv, rhol, z
     integer, intent(in) :: ibegin
     real(real32), intent(in) :: eia, freq

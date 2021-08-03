@@ -44,10 +44,16 @@ module read_era5
     ! convert to "rhocwat" (cloud water density), and then with temperature, to
     ! "rhol" and "rhoi" (liquid and ice components of the density)
 
+    ! TODO: surface temperature and surface relative humidity
+
     ! Surface pressure in hPa, dimensioned as (lons, lats, time)
     real(real32), dimension(:, :, :), allocatable :: surface_pressure
 
-    ! TODO: precipitable water (surface) and columnar cloud water (surface)?
+    ! Total column water vapor in kg/m^2, dimensioned as (lons, lats, time)
+    real(real32), dimension(:, :, :), allocatable :: columnar_water_vapor
+
+    ! Total column cloud liquid water in kg/m^2, dimensioned as (lons, lats, time)
+    real(real32), dimension(:, :, :), allocatable :: columnar_cloud_liquid
 
     contains
       procedure :: load => read_era5_data
@@ -97,7 +103,9 @@ contains
         self%temperature(lon_len, lat_len, level_len, time_len), &
         self%relative_humidity(lon_len, lat_len, level_len, time_len), &
         self%height(lon_len, lat_len, level_len, time_len), &
-        self%surface_pressure(lon_len, lat_len, time_len))
+        self%surface_pressure(lon_len, lat_len, time_len), &
+        self%columnar_water_vapor(lon_len, lat_len, time_len), &
+        self%columnar_cloud_liquid(lon_len, lat_len, time_len))
     end if
 
     ! Read the coordinate variables
@@ -128,6 +136,8 @@ contains
 
     allocate(packed_short_3d(lon_len, lat_len, time_len))
     call unpack_variable_3d(ncid, "sp", packed_short_3d, self%surface_pressure)
+    call unpack_variable_3d(ncid, "tcwv", packed_short_3d, self%columnar_water_vapor)
+    call unpack_variable_3d(ncid, "tclw", packed_short_3d, self%columnar_cloud_liquid)
     deallocate(packed_short_3d)
     call check_nc(nf90_close(ncid))
 
@@ -149,6 +159,8 @@ contains
     self%relative_humidity = cshift(self%relative_humidity(:, lat_len:1:-1, :, :), lon_len / 2, 1)
     self%height = cshift(self%height(:, lat_len:1:-1, :, :), lon_len / 2, 1)
     self%surface_pressure = cshift(self%surface_pressure(:, lat_len:1:-1, :), lon_len / 2, 1)
+    self%columnar_water_vapor = cshift(self%columnar_water_vapor(:, lat_len:1:-1, :), lon_len / 2, 1)
+    self%columnar_cloud_liquid = cshift(self%columnar_cloud_liquid(:, lat_len:1:-1, :), lon_len / 2, 1)
   end subroutine read_era5_data
 
   ! -------------------------------------------------------------------------------
@@ -157,7 +169,7 @@ contains
 
     deallocate(self%levels, self%lats, self%lons, self%time, &
       self%temperature, self%relative_humidity, self%height, &
-      self%surface_pressure)
+      self%surface_pressure, self%columnar_water_vapor, self%columnar_cloud_liquid)
   end subroutine free_era5_data
 
   ! -------------------------------------------------------------------------------
