@@ -14,7 +14,7 @@ project('access_rtm',
         'buildtype=debugoptimized',
         'warning_level=3',
         'b_pie=true',
-        'fortran_std=f2008',
+        'fortran_std=f2018',
     ],
     meson_version : '>=0.49')
 
@@ -32,7 +32,7 @@ if meson.get_compiler('fortran').get_argument_syntax() == 'gcc'
     if meson.version().version_compare('<0.53')
         # This is instead handled by the "fortran_std" option for newer
         # versions of meson
-        add_project_arguments('-std=f2008', language : 'fortran')
+        add_project_arguments('-std=f2018', language : 'fortran')
     endif
 
     add_project_link_arguments(
