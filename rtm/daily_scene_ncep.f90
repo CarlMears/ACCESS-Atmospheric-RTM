@@ -35,7 +35,6 @@ module daily_scene_ncep
      real(real64), dimension(NUM_LAT) :: lat
      real(real64), dimension(NUM_LON) :: lon
      real(real64), dimension(NUM_FREQ) :: freq
-     integer(int32), dimension(2) :: pol
 
      ! These are dimensioned as (lon, lat, hour)
      real(real32), dimension(:, :, :), allocatable :: col_vapor, col_water
@@ -69,7 +68,6 @@ contains
     self%doy = doy
     self%hour = HOURS
     self%freq = FREQS
-    self%pol = [1, 2]
     self%lat = [(LAT0 + DLAT * ilat, ilat = 0, NUM_LAT - 1)]
     self%lon = [(LON0 + DLON * ilon, ilon = 0, NUM_LON - 1)]
 
@@ -118,7 +116,6 @@ contains
 
     self%hour(:) = 0
     self%freq(:) = 0
-    self%pol(:) = 0
     self%lat(:) = 0
     self%lon(:) = 0
     self%year = -1
@@ -132,8 +129,7 @@ contains
     character(len=*), intent(in) :: filename_out
 
     integer :: ncid, varid
-    integer :: dim_hour, dim_lat, dim_lon, dim_freq, dim_pol
-    ! integer :: pol_enum_id
+    integer :: dim_hour, dim_lat, dim_lon, dim_freq
     character(len=80) :: nc_version_full
     character(len=10) :: nc_version
     character(len=5) :: time_zone
@@ -192,12 +188,6 @@ contains
     call handle_nc_err(nf90_def_dim(ncid, "lat", NUM_LAT, dim_lat))
     call handle_nc_err(nf90_def_dim(ncid, "lon", NUM_LON, dim_lon))
     call handle_nc_err(nf90_def_dim(ncid, "freq", NUM_FREQ, dim_freq))
-    call handle_nc_err(nf90_def_dim(ncid, "pol", 2, dim_pol))
-
-    ! ! Define enum
-    ! call handle_nc_err(nf90_def_enum(ncid, NF90_INT, "pol", pol_enum_id))
-    ! call handle_nc_err(nf90_insert_enum(ncid, pol_enum_id, "v", 1))
-    ! call handle_nc_err(nf90_insert_enum(ncid, pol_enum_id, "h", 2))
 
     ! Define and write coordinate variables and their attributes
     call handle_nc_err(nf90_def_var(ncid, "hour", NF90_INT, dim_hour, varid))
@@ -224,11 +214,6 @@ contains
     call handle_nc_err(nf90_put_att(ncid, varid, "standard_name", "sensor_band_central_radiation_frequency"))
     call handle_nc_err(nf90_put_att(ncid, varid, "long_name", "frequency"))
     call handle_nc_err(nf90_put_att(ncid, varid, "units", "GHz"))
-
-    ! call handle_nc_err(nf90_def_var(ncid, "pol", pol_enum_id, dim_pol, varid))
-    call handle_nc_err(nf90_def_var(ncid, "pol", NF90_INT, dim_pol, varid))
-    call handle_nc_err(nf90_put_var(ncid, varid, [1, 2]))
-    call handle_nc_err(nf90_put_att(ncid, varid, "long_name", "polarization"))
 
     ! Define and write the datasets and their attributes
     call handle_nc_err(nf90_def_var(ncid, "col_vapor", NF90_FLOAT, [dim_lon, dim_lat, dim_hour], varid, &
