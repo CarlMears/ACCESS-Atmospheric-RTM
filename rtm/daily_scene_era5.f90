@@ -69,6 +69,9 @@ contains
     character(len=255) :: filename_profiles, filename_surface
     type(Era5DailyData) :: era5_data
 
+    integer :: tick, now
+    real :: clock_rate, dt
+
     self%year = year
     self%doy = doy
     self%hour = HOURS
@@ -85,13 +88,19 @@ contains
     call find_month_day(year, doy, month, day)
 
     ! Read ERA5 surface/profile data for the day
+    call system_clock(tick, clock_rate)
     write (filename_profiles, '("era5_levels_", i4.4, "-", i2.2, "-", i2.2, ".nc")') year, month, day
     write (filename_surface, '("era5_surface_", i4.4, "-", i2.2, "-", i2.2, ".nc")') year, month, day
     write (*, *) "Loading ERA5 profile data from: " // trim(filename_profiles)
     write (*, *) "Loading ERA5 surface data from: " // trim(filename_surface)
     call era5_data%load(filename_profiles, filename_surface)
 
+    call system_clock(now)
+    dt = (now - tick) / clock_rate
+    write (*, '(" Finished reading data in ", f0.2, " s")') dt
+
     ! Apply the RTM
+    call system_clock(tick)
     do ihour = 1, NUM_HR
       write (*, '("   surface/profile and RTM, hour ", i0, "/", i0)') ihour, NUM_HR
       do ilat = 1, NUM_LAT
@@ -112,6 +121,10 @@ contains
         end do
       end do
     end do
+
+    call system_clock(now)
+    dt = (now - tick) / clock_rate
+    write (*, '(" Finished applying RTM in ", f0.2, " s")') dt
   end subroutine read_daily_scene_data
 
   ! ----------------------------------------------------------------------
