@@ -122,6 +122,7 @@ contains
     xterm=1-tht
 
     sum = 0.
+    !$omp simd reduction(+:sum) private(ga, gasq, delta, rnuneg, rnupos, ff)
     do i=1, nlines
        ga = a3(i)*(pdry*tht**(0.8-a4(i)) + 1.1*tht*pwet)
        gasq=ga*ga
