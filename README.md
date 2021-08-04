@@ -51,10 +51,10 @@ meson setup build rtm
 meson compile -C build
 ```
 
-An example run for 2020-01-01:
+An example run for 2020-01-01 using the `era5` data directory from above:
 
 ```bash
-./build/access_rtm 2020 1 access_era_2020-01-01.nc
+./build/access_rtm 2020 1 access_era_2020-01-01.nc --in-dir era5
 ```
 
 It reads the ERA5 data for a single day and runs the RTM for some hard-coded

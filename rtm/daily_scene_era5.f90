@@ -55,8 +55,9 @@ module daily_scene_era5
 contains
 
   ! ----------------------------------------------------------------------
-  subroutine read_daily_scene_data(self, year, doy)
+  subroutine read_daily_scene_data(self, era5_dir, year, doy)
     class(DailySceneDataEra5), intent(inout) :: self
+    character(len=*), intent(in) :: era5_dir
     integer(int32), intent(in) :: year, doy
 
     integer :: ihour, ilat, ilon, ifreq
@@ -89,8 +90,8 @@ contains
 
     ! Read ERA5 surface/profile data for the day
     call system_clock(tick, clock_rate)
-    write (filename_profiles, '("era5_levels_", i4.4, "-", i2.2, "-", i2.2, ".nc")') year, month, day
-    write (filename_surface, '("era5_surface_", i4.4, "-", i2.2, "-", i2.2, ".nc")') year, month, day
+    write (filename_profiles, '(A, "/era5_levels_", i4.4, "-", i2.2, "-", i2.2, ".nc")') trim(era5_dir), year, month, day
+    write (filename_surface, '(A, "/era5_surface_", i4.4, "-", i2.2, "-", i2.2, ".nc")') trim(era5_dir), year, month, day
     write (*, *) "Loading ERA5 profile data from: " // trim(filename_profiles)
     write (*, *) "Loading ERA5 surface data from: " // trim(filename_surface)
     call era5_data%load(filename_profiles, filename_surface)
