@@ -8,7 +8,10 @@ module read_era5
   private
   public :: Era5DailyData
 
-  ! Daily ERA5 surface/profile data
+  ! Daily ERA5 surface/profile data.
+  !
+  ! The data represented here is the combination of the surface and profile data
+  ! for a day with a little bit of post-processing.
   type Era5DailyData
     ! Lengths of the dimensions
     integer(int32) :: num_time, num_lats, num_lons, num_levels

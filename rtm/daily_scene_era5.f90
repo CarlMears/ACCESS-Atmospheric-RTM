@@ -63,7 +63,7 @@ contains
     integer :: month, day
     integer :: ibegin
 
-    real(real32), dimension(0:NMAX) :: p, t, pv, rhov, rhol, z
+    real(real32), dimension(0:NMAX) :: p, t, pv, rhol, z
     real(real32) :: tran, tb_up, tb_down
 
     character(len=255) :: filename_profiles, filename_surface
@@ -103,8 +103,6 @@ contains
     call system_clock(tick)
     do ihour = 1, NUM_HR
       write (*, '("   surface/profile and RTM, hour ", i0, "/", i0)') ihour, NUM_HR
-      ! TODO: gfortran 12 will support OpenMP 5.0 better, so the "parallel do"
-      ! construct can be replaced with a "parallel loop"
       !$omp parallel do collapse(2) private(ibegin, p, t, pv, rhol, z, tran, tb_up, tb_down)
       do ilat = 1, NUM_LAT
         do ilon = 1, NUM_LON
