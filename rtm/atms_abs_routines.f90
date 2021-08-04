@@ -12,7 +12,7 @@ module atms_abs_routines
   use trig_degrees, only: cosd
   implicit none
   private
-  public :: fdabsoxy_1992_modified, abh2o_rk_modified, atm_tran, fdabscoeff, fdcldabs
+  public :: atm_tran, fdabscoeff, fdcldabs
 
 contains
 
@@ -106,7 +106,7 @@ contains
          773.839675,  671.00e-6,  0.130, 18.10e-3,  0.0,    0.0,   &
          834.145330,  180.00e-6,  0.147, 18.10e-3,  0.0,    0.0/
 
-    if(first) then
+    if (first) then
        first=.false.
        f0(:)=h(1,:)
        a1(:)=h(2,:)/h(1,:)
@@ -114,7 +114,7 @@ contains
        a3(:)=h(4,:)
        a5(:)=0.001*h(5,:)
        a6(:)=0.001*h(6,:)
-    endif
+    end if
 
     tht = 300/t
     pwet=0.1*pv
@@ -122,7 +122,7 @@ contains
     xterm=1-tht
 
     sum = 0.
-    do i=1,nlines
+    do i=1, nlines
        ga = a3(i)*(pdry*tht**(0.8-a4(i)) + 1.1*tht*pwet)
        gasq=ga*ga
        delta=(a5(i) + a6(i)*tht)*p*tht**0.8
@@ -130,7 +130,7 @@ contains
        rnupos = f0(i)+freq
        ff = (ga-rnuneg*delta)/(gasq+rnuneg**2) +  (ga-rnupos*delta)/(gasq+rnupos**2)
        sum = sum + ff*a1(i)*exp(a2(i)*xterm)
-    enddo
+    end do
     if (sum < 0) sum=0
 
     !     add nonresonant contribution
@@ -145,7 +145,7 @@ contains
 
     gamoxy=0.1820*freq*sftot
     !x    if(freq.gt.37) gamoxy=gamoxy + 0.1820*43.e-10 *pdry**2*tht**3*(freq-37.)**1.7  !prior to 7/17/2015
-    if(freq.gt.37) gamoxy=gamoxy + 0.1820*26.e-10 *pdry**2*tht**3*(freq-37.)**1.8  !implemented 7/17/2015.
+    if (freq > 37) gamoxy=gamoxy + 0.1820*26.e-10 *pdry**2*tht**3*(freq-37.)**1.8  !implemented 7/17/2015.
   end subroutine fdabsoxy_1992_modified
 
 
@@ -228,19 +228,18 @@ contains
     real(real32), dimension(nlines), parameter :: b6 = [ &
          .61, .85, .54, .74, .89, .52, .50, .67, .65, .64, .72, 1.0, .68, .84, .78]
     !
-    if(first) then
+    if (first) then
        first = .false.
        b1=1.8281089E+14*b1/f0**2
        b5=b5/b3  !convert b5 to Leibe notation
        !1    b1(1)=1.01*b1(1)  !this modification is no longer done
        b3(1)=b3(1)/1.040 !modification 1
-    endif
+    end if
 
-    if(pv.le.0.) then
+    if (pv <= 0.) then
        gamh2o=0
        return
-    endif
-
+    end if
 
     pwet=0.1*pv
     pdry=0.1*p-pwet
@@ -249,7 +248,7 @@ contains
     freqsq=freq*freq
 
     sum = 0.
-    do i=1,nlines
+    do i = 1, nlines
        f0sq=f0(i)*f0(i)
        ga=b3(i)*(pdry*tht**b4(i) + b5(i)*pwet*tht**b6(i))
        gasq = ga*ga
@@ -258,29 +257,27 @@ contains
        rnupos = f0(i)+freq
        base = ga/(562500. + gasq)  !use clough's definition of local line contribution
 
-       if(i.ne.1) then
-          if(abs(rnuneg).lt.750) sum = sum + s*(ga/(gasq + rnuneg**2) - base)
-          if(abs(rnupos).lt.750) sum = sum + s*(ga/(gasq + rnupos**2) - base)
-
+       if (i /= 1) then
+          if (abs(rnuneg) < 750) sum = sum + s*(ga/(gasq + rnuneg**2) - base)
+          if (abs(rnupos) < 750) sum = sum + s*(ga/(gasq + rnupos**2) - base)
        else
           chi=0.07*ga   !modification 2
 
-          if(freq.lt.19) then
+          if (freq < 19) then
              u=abs(freq-19.)/16.5
-             if(u.lt.0) u=0
-             if(u.gt.1) u=1
+             if (u < 0) u=0
+             if (u > 1) u=1
              chi=0.07*ga + 0.93*ga*u*u*(3-2*u)  !modification 2
-          endif
+          end if
 
           chisq=chi*chi
-          sum=sum +     s*2*((ga-chi)*freqsq + (ga+chi)*(f0sq+gasq-chisq))/((freqsq-f0sq-gasq+chisq)**2 + 4*freqsq*gasq)
-       endif
-
-    enddo
-    if(sum.lt.0) sum=0
+          sum=sum + s*2*((ga-chi)*freqsq + (ga+chi)*(f0sq+gasq-chisq))/((freqsq-f0sq-gasq+chisq)**2 + 4*freqsq*gasq)
+       end if
+    end do
+    if (sum < 0) sum=0
 
     ffac=1
-    if(freq.lt.90) ffac=ffac + 0.1*((90.-freq)/90.)**1.4
+    if (freq < 90) ffac=ffac + 0.1*((90. - freq)/90.)**1.4
     !1    sftot=pwet*freq*tht**3.5*(sum +      1.1*1.2957246e-6*pdry/tht**0.5 + 0.425*(freq**0.10)*4.2952193e-5*pwet*tht**4) !previous version
     sftot=real(pwet*freq*tht**3.5*(sum + ffac*1.1*1.2957246e-6*pdry/tht**0.5 + 0.348*(freq**0.15)*4.2952193e-5*pwet*tht**4), real32) !modification 3
 
@@ -324,21 +321,21 @@ contains
        opacty(i)=-dsdh*0.5*(tabs(i-1)+tabs(i))*(z(i)-z(i-1))
        tavg(i)  =0.5*(t(i-1)+t(i))
        ems(i)   =1.-exp(opacty(i))
-    enddo
+    end do
 
     sumop=0
     sumdw=0
     do i=1,nlev
        sumdw=sumdw+(tavg(i)-t(1))*ems(i)*exp(sumop)
        sumop=sumop+opacty(i)
-    enddo
+    end do
 
     sumop=0
     sumup=0.
     do i=nlev,1,-1
        sumup=sumup+(tavg(i)-t(1))*ems(i)*exp(sumop)
        sumop=sumop+opacty(i)
-    enddo
+    end do
 
     tran=exp(sumop)
     tbavg=(1.-tran)*t(1)
