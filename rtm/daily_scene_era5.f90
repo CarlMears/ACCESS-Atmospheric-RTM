@@ -286,6 +286,8 @@ contains
 
     real(real32), dimension(0:NMAX) :: hgt, rh, rhov
     integer :: ipr
+    ! Mean radius of the Earth in meters
+    real(real32), parameter :: R_e = 6371e3
 
     p(0) = 0.
     p(1:NMAX) = era5_data%levels(:)
@@ -315,8 +317,15 @@ contains
     rh(ibegin) = rh(0)
     ! clwmr(ibegin) = clwmr(0)
 
+    ! Convert geopotential height to geometric height
+    z = hgt * R_e / (R_e - hgt)
+    if (z(ibegin) >= z(ibegin+1)) z(ibegin) = z(ibegin+1) - 0.1
+
     ! find water vapor partial pressure and water vapor density
-    ! call goff_gratch_vap(t, rh, p, pv, rhov)
+    call goff_gratch_vap(t, rh, p, pv, rhov)
+
+    ! TODO: compute rhol
+    rhol(:) = 0.
   end subroutine prepare_parameters
 
   ! ----------------------------------------------------------------------
