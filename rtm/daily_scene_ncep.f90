@@ -9,9 +9,9 @@ module daily_scene_ncep
   private
   public :: DailySceneDataNcep
 
-  ! Number of hours used per day (TODO: probably increase to 24 later)
-  integer, parameter :: NUM_HR = 2
-  integer(int32), dimension(NUM_HR), parameter :: HOURS = [0, 12]
+  ! Number of hours used per day
+  integer, parameter :: NUM_HR = 4
+  integer(int32), dimension(NUM_HR), parameter :: HOURS = [0, 6, 12, 18]
 
   ! All data is on a 1-degree grid
   integer, parameter :: NUM_LAT = 181, NUM_LON = 360
