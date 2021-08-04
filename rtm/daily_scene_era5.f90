@@ -340,7 +340,8 @@ contains
     ! find water vapor partial pressure and water vapor density
     call goff_gratch_vap(t, rh, p, pv, rhov)
 
-    ! TODO: compute rhol
+    ! TODO: convert specific cloud liquid water content (kg/kg) to liquid water
+    ! density (g/m^3)
     rhol(:) = 0.
   end subroutine prepare_parameters
 

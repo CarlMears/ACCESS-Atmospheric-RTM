@@ -38,9 +38,9 @@ module read_era5
     ! Geopotential height profile in meters, dimensioned as (lons, lats, levels, time)
     real(real32), dimension(:, :, :, :), allocatable :: height
 
-    ! TODO: cloud water mixing ratio (profile)? Looks like this is only used to
-    ! convert to "rhocwat" (cloud water density), and then with temperature, to
-    ! "rhol" and "rhoi" (liquid and ice components of the density)
+    ! Profile specific liquid water content (from clouds) in kg/kg, dimensioned
+    ! as (lons, lats, levels, time)
+    real(real32), dimension(:, :, :, :), allocatable :: liquid_content
 
     ! Surface pressure in hPa, dimensioned as (lons, lats, time)
     real(real32), dimension(:, :, :), allocatable :: surface_pressure
@@ -108,6 +108,7 @@ contains
         self%temperature(lon_len, lat_len, level_len, time_len), &
         self%relative_humidity(lon_len, lat_len, level_len, time_len), &
         self%height(lon_len, lat_len, level_len, time_len), &
+        self%liquid_content(lon_len, lat_len, level_len, time_len), &
         self%surface_pressure(lon_len, lat_len, time_len), &
         self%surface_temperature(lon_len, lat_len, time_len), &
         self%surface_relative_humidity(lon_len, lat_len, time_len), &
@@ -135,6 +136,7 @@ contains
     call unpack_variable_4d(ncid, "t", packed_short_4d, self%temperature)
     call unpack_variable_4d(ncid, "r", packed_short_4d, self%relative_humidity)
     call unpack_variable_4d(ncid, "z", packed_short_4d, self%height)
+    call unpack_variable_4d(ncid, "clwc", packed_short_4d, self%liquid_content)
     deallocate(packed_short_4d)
     call check_nc(nf90_close(ncid))
 
@@ -176,6 +178,7 @@ contains
     self%temperature = cshift(self%temperature(:, lat_len:1:-1, :, :), lon_len / 2, 1)
     self%relative_humidity = cshift(self%relative_humidity(:, lat_len:1:-1, :, :), lon_len / 2, 1)
     self%height = cshift(self%height(:, lat_len:1:-1, :, :), lon_len / 2, 1)
+    self%liquid_content = cshift(self%liquid_content(:, lat_len:1:-1, :, :), lon_len / 2, 1)
     self%surface_pressure = cshift(self%surface_pressure(:, lat_len:1:-1, :), lon_len / 2, 1)
     self%surface_temperature = cshift(self%surface_temperature(:, lat_len:1:-1, :), lon_len / 2, 1)
     self%surface_relative_humidity = cshift(self%surface_relative_humidity(:, lat_len:1:-1, :), lon_len / 2, 1)
@@ -190,7 +193,7 @@ contains
 
     deallocate(self%levels, self%lats, self%lons, self%time, &
       self%temperature, self%relative_humidity, self%height, &
-      self%surface_pressure, self%surface_temperature, &
+      self%liquid_content, self%surface_pressure, self%surface_temperature, &
       self%surface_relative_humidity, self%surface_height, &
       self%columnar_water_vapor, self%columnar_cloud_liquid)
   end subroutine free_era5_data

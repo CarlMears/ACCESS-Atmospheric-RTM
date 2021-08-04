@@ -62,6 +62,7 @@ ATM_VARIABLES = [
     "temperature",
     "geopotential",
     "relative_humidity",
+    "specific_cloud_liquid_water_content",
 ]
 
 
