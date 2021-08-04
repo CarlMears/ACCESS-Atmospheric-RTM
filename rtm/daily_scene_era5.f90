@@ -292,16 +292,32 @@ contains
 
   ! ----------------------------------------------------------------------
   ! From the ERA5 data, prepare these profile/surface parameters for the RTM
-  subroutine prepare_parameters(era5_data, ilat, ilon, itime, ibegin, p, t, pv, rhol, z)
+  pure subroutine prepare_parameters(era5_data, ilat, ilon, itime, ibegin, p, t, pv, rhol, z)
     type(Era5DailyData), intent(in) :: era5_data
     integer, intent(in) :: ilat, ilon, itime
     integer, intent(out) :: ibegin
     real(real32), dimension(0:NMAX), intent(out) :: p, t, pv, rhol, z
 
-    real(real32), dimension(0:NMAX) :: hgt, rh, rhov
     integer :: ipr
+    real(real32), dimension(0:NMAX) :: hgt, rh, rhov, q_l
+    real(real32), dimension(0:NMAX) :: R_moist, q_h2o, w
+
+    ! Ideal gas constant (J/mol/K)
+    real(real32), parameter :: R = 8.3144598
+    ! Mean molar mass of dry air (g/mol)
+    real(real32), parameter :: M_dry = 28.9644
+    ! Mean molar mass of water (g/mol)
+    real(real32), parameter :: M_h2o = 18.01528
+    ! Specific gas constant for dry air (J/g/K)
+    real(real32), parameter :: R_dry = R / M_dry
+    ! Specific gas constant for water vapor (J/g/K)
+    real(real32), parameter :: R_vapor = R / M_h2o
     ! Mean radius of the Earth in meters
     real(real32), parameter :: R_e = 6371e3
+    ! Coefficient for ratio between molar masses
+    real(real32), parameter :: epsilon = M_h2o / M_dry
+    ! Scaling factor using epsilon
+    real(real32), parameter :: eps_scale = (1 - epsilon) / epsilon
 
     p(0) = 0.
     p(1:NMAX) = era5_data%levels(:)
@@ -314,6 +330,9 @@ contains
 
     rh(0) = era5_data%surface_relative_humidity(ilon, ilat, itime)
     rh(1:NMAX) = era5_data%relative_humidity(ilon, ilat, 1:NMAX, itime)
+
+    q_l(0) = 0.
+    q_l(1:NMAX) = era5_data%liquid_content(ilon, ilat, 1:NMAX, itime)
 
     ! Find "ibegin", or the starting index for the surface
     ibegin = -1
@@ -329,18 +348,35 @@ contains
     t(ibegin) = t(0)
     hgt(ibegin) = hgt(0)
     rh(ibegin) = rh(0)
-    ! clwmr(ibegin) = clwmr(0)
+    q_l(ibegin) = q_l(ibegin+1)
 
     ! Convert geopotential height to geometric height
     z = hgt * R_e / (R_e - hgt)
     if (z(ibegin) >= z(ibegin+1)) z(ibegin) = z(ibegin+1) - 0.1
 
-    ! find water vapor partial pressure and water vapor density
+    ! Find the vapor pressure and water vapor density
     call goff_gratch_vap(t, rh, p, pv, rhov)
 
-    ! TODO: convert specific cloud liquid water content (kg/kg) to liquid water
-    ! density (g/m^3)
-    rhol(:) = 0.
+    ! Convert relative humidity to specific humidity
+    ! (https://earthscience.stackexchange.com/a/5077)
+    !
+    ! w is the mass mixing ratio of the water vapor to dry air; note that
+    ! pressure is converted from hPa to Pa
+    where (p > 0)
+      w = (pv * R_dry) / (R_vapor * (p * 1e2 - pv))
+      q_h2o = w / (w + 1)
+    elsewhere
+      q_h2o = 0
+    end where
+
+    ! Convert specific cloud liquid water content (kg/kg) to liquid water
+    ! density (g/m^3).
+    !
+    ! See here, section 4:
+    ! https://www.nwpsaf.eu/site/download/documentation/rtm/docs_rttov12/rttov_gas_cloud_aerosol_units.pdf
+    ! gas constant for humid air (J/gK)
+    R_moist(:) = R_dry * (1 + eps_scale * q_h2o)
+    rhol(:) = q_l * (1e2 * p) / (R_moist * T)
   end subroutine prepare_parameters
 
   ! ----------------------------------------------------------------------
