@@ -341,30 +341,25 @@ contains
 
     real(real32) :: abh2o,abo2,abcld
     real(real32), dimension(0:NMAX) :: tabs
-    real(real32) :: pv_fix
     integer :: ipr
 
     do ipr = ibegin,NMAX
-       !     for 2002-2007, there is a big dif between vap and pwat, with vap being near 36 mm for amazon and pwat being 50 mm
-       !     in 2008 vap increases and is very similar to pwat.  I do not understand why vap changes.
-       !     to make things consistent, here is normalized to pwat
-       pv_fix=(pwat/colvap)*pv(ipr)
+      ! Water/oxygen absorption coefficients in neper/km
+      call fdabscoeff(freq,p(ipr),t(ipr),pv(ipr), abh2o,abo2)
 
-       call fdabscoeff(freq,p(ipr),t(ipr),pv_fix,  abh2o,abo2) ! neper/km
-
-       if (rhol(ipr) > 1.0e-7) then
-          call fdcldabs(freq,t(ipr),rhol(ipr),   abcld) ! nepers/km
+      ! Cloud absorption coefficients in neper/km
+      if (rhol(ipr) > 1.0e-7) then
+          call fdcldabs(freq,t(ipr),rhol(ipr), abcld)
        else
           abcld = 0.0
        endif
 
-       ! total absorption, convert from Np/km to Np/m
+       ! Total absorption coefficient, converting from Np/km to Np/m
        tabs(ipr) = (abh2o + abo2 + abcld) * 1.e-3
-    enddo
+    end do
 
     call atm_tran(NMAX-ibegin,eia,t(ibegin:NMAX),z(ibegin:NMAX),tabs(ibegin:NMAX), &
          tran,tb_down,tb_up)
-
   end subroutine atmo_params
 
 end module daily_scene_era5
