@@ -1,18 +1,18 @@
-program access_rtm
+program access_rtm_ncep
   use, intrinsic :: iso_fortran_env, only: ERROR_UNIT
-  use daily_scene_era5, only: DailySceneDataEra5
+  use daily_scene_ncep, only: DailySceneDataNcep
   implicit none
 
-  character(len=*), parameter :: PROG_NAME = "access_rtm"
+  character(len=*), parameter :: PROG_NAME = "access_rtm_ncep"
 
   character(len=120) :: filename_out
   integer :: year, doy
-  type(DailySceneDataEra5) :: data
+  type(DailySceneDataNcep) :: data
 
   ! ----------------------------------------------------------------------
   call parse_args(year, doy, filename_out)
 
-  write (*,'(" Applying RTM using ERA5 data for: ", i4.4, "-", i3.3)') year, doy
+  write (*,'(" Applying RTM using NCEP data for: ", i4.4, "-", i3.3)') year, doy
   call data%load(year, doy)
 
   write (*, *) "Writing output: ", filename_out
@@ -80,7 +80,7 @@ contains
     write (*, *) " usage: " // PROG_NAME // " [-h] [-V] " &
          // "year doy out_file"
     write (*, *)
-    write (*, *) " Apply RTM for ACCESS for one day of ERA5 data"
+    write (*, *) " Apply RTM for ACCESS for one day of NCEP data"
     write (*, *)
     write (*, *) " positional arguments:"
     write (*, *) "   year      Year to use for geophysical input data"
@@ -92,4 +92,4 @@ contains
     write (*, *) "   -V, --version   show the version info and exit"
   end subroutine print_help
 
-end program access_rtm
+end program access_rtm_ncep

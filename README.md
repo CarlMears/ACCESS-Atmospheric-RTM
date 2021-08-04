@@ -7,7 +7,7 @@ For the ACCESS project, download ERA5 atmosphere geophysical parameters and appl
 Currently, this contains two main projects:
 
 - `download_era5.py`: Python script to download ERA5 data
-- `rtm/`: Fortran executable to apply RTM to ERA5 data
+- `rtm/`: Fortran executables to apply RTM to ERA5 data
 
 ## Downloading ERA5 data
 
@@ -54,16 +54,17 @@ meson compile -C build
 An example run for 2020-01-01:
 
 ```bash
-./build/access_rtm 1 2020 1 access_era_2020-01-01.nc
+./build/access_rtm 2020 1 access_era_2020-01-01.nc
 ```
 
 It reads the ERA5 data for a single day and runs the RTM for some hard-coded
 incidence angle and microwave frequency configuration. The outputs are on a
 0.25-degree grid.
 
-Currently it also supports reading NCEP GDAS data (as post-processed by RSS) for
-debugging. This, however, is on a 1-degree grid.
+For debugging purposes, there is also another executable, `access_rtm_ncep`,
+which reads NCEP GDAS data (as post-processed by RSS). This, however, is on a
+1-degree grid.
 
 ```bash
-./build/access_rtm 2 2020 1 access_ncep_2020-01-01.nc
+./build/access_rtm_ncep 2020 1 access_ncep_2020-01-01.nc
 ```
