@@ -64,8 +64,7 @@ contains
     integer :: ibegin
 
     real(real32), dimension(0:NMAX) :: p, t, pv, rhov, rhol, z
-    real(real32) :: colvap, colwat, pwat, cwat
-    real(real32) :: lat, lon, tran, tb_up, tb_down
+    real(real32) :: tran, tb_up, tb_down
 
     character(len=255) :: filename_profiles, filename_surface
     type(Era5DailyData) :: era5_data
@@ -97,28 +96,19 @@ contains
       write (*, '("   surface/profile and RTM, hour ", i0, "/", i0)') ihour, NUM_HR
       do ilat = 1, NUM_LAT
         do ilon = 1, NUM_LON
-          lat = real(self%lat(ilat), real32)
-          lon = real(self%lon(ilon), real32)
-          if (lon < 0) lon = lon + 360
-
           self%col_vapor(ilon, ilat, ihour) = era5_data%columnar_water_vapor(ilon, ilat, ihour)
           self%col_water(ilon, ilat, ihour) = era5_data%columnar_cloud_liquid(ilon, ilat, ihour)
 
-          call prepare_parameters(era5_data, ilat, ilon, ihour, ibegin, p, t, pv, z)
+          call prepare_parameters(era5_data, ilat, ilon, ihour, ibegin, p, t, pv, rhol, z)
+          do ifreq = 1, NUM_FREQ
+            call atmo_params(p, t, pv, rhol, z, ibegin, &
+              EIA_NOMINAL, real(self%freq(ifreq), real32), &
+              tran, tb_up, tb_down)
 
-          ! TODO: use ERA5 data instead
-          !  call findncep(year, month, day, (ihour - 1) * 6, &
-          !       lat, lon, &
-          !       colvap, colwat, pwat, cwat, p, t, pv, rhov, rhol, z, ibegin)
-
-          !  do ifreq = 1, NUM_FREQ
-          !     call atmo_params(colvap, pwat, p, t, pv, rhol, z, ibegin, &
-          !          EIA_NOMINAL, real(self%freq(ifreq), real32), tran, tb_up, tb_down)
-
-          !     self%tran(ilon, ilat, ifreq, ihour) = tran
-          !     self%tb_up(ilon, ilat, ifreq, ihour) = tb_up
-          !     self%tb_down(ilon, ilat, ifreq, ihour) = tb_down
-          !  end do
+              self%tran(ilon, ilat, ifreq, ihour) = tran
+              self%tb_up(ilon, ilat, ifreq, ihour) = tb_up
+              self%tb_down(ilon, ilat, ifreq, ihour) = tb_down
+           end do
         end do
       end do
     end do
@@ -288,11 +278,11 @@ contains
 
   ! ----------------------------------------------------------------------
   ! From the ERA5 data, prepare these profile/surface parameters for the RTM
-  subroutine prepare_parameters(era5_data, ilat, ilon, itime, ibegin, p, t, pv, z)
+  subroutine prepare_parameters(era5_data, ilat, ilon, itime, ibegin, p, t, pv, rhol, z)
     type(Era5DailyData), intent(in) :: era5_data
     integer, intent(in) :: ilat, ilon, itime
     integer, intent(out) :: ibegin
-    real(real32), dimension(0:NMAX), intent(out) :: p, t, pv, z
+    real(real32), dimension(0:NMAX), intent(out) :: p, t, pv, rhol, z
 
     real(real32), dimension(0:NMAX) :: hgt, rh, rhov
     integer :: ipr
@@ -331,9 +321,8 @@ contains
 
   ! ----------------------------------------------------------------------
   ! Apply the RTM to obtain atmospheric terms
-  subroutine atmo_params(colvap, pwat, p, t, pv, rhol, z, ibegin, &
+  subroutine atmo_params(p, t, pv, rhol, z, ibegin, &
        eia, freq, tran, tb_up, tb_down)
-    real(real32), intent(in) :: colvap, pwat
     real(real32), dimension(0:NMAX), intent(in) :: p, t, pv, rhol, z
     integer, intent(in) :: ibegin
     real(real32), intent(in) :: eia, freq
