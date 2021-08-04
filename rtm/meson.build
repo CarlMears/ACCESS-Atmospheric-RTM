@@ -61,6 +61,8 @@ else
     netcdff = dependency('netcdf-fortran')
 endif
 
+openmp = dependency('openmp', required : false)
+
 # -----------------------
 executable('access_rtm',
     sources : [
@@ -76,4 +78,4 @@ executable('access_rtm',
         'trig_degrees.f90',
         'wvap_convert.f90',
     ],
-    dependencies : netcdff)
+    dependencies : [netcdff, openmp])
