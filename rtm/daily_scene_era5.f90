@@ -300,13 +300,13 @@ contains
     p(0) = 0.
     p(1:NMAX) = era5_data%levels(:)
 
-    t(0) = 0. ! TODO
+    t(0) = era5_data%surface_temperature(ilon, ilat, itime)
     t(1:NMAX) = era5_data%temperature(ilon, ilat, 1:NMAX, itime)
 
-    hgt(0) = 0. ! TODO
+    hgt(0) = era5_data%surface_height(ilon, ilat, itime)
     hgt(1:NMAX) = era5_data%height(ilon, ilat, 1:NMAX, itime)
 
-    rh(0) = 0. ! TODO
+    rh(0) = era5_data%surface_relative_humidity(ilon, ilat, itime)
     rh(1:NMAX) = era5_data%relative_humidity(ilon, ilat, 1:NMAX, itime)
 
     ! Find "ibegin", or the starting index for the surface

@@ -2,6 +2,7 @@
 module read_era5
   use, intrinsic :: iso_fortran_env, only: real32, int16, int32, ERROR_UNIT
   use, intrinsic :: ieee_arithmetic, only: ieee_value, ieee_quiet_nan
+  use wvap_convert, only: buck_vap
   use netcdf
   implicit none
   private
@@ -9,9 +10,6 @@ module read_era5
 
   ! Daily ERA5 surface/profile data
   type Era5DailyData
-    ! The day this data is valid for
-    integer(int32) :: year, month, day
-
     ! Lengths of the dimensions
     integer(int32) :: num_time, num_lats, num_lons, num_levels
 
@@ -37,17 +35,24 @@ module read_era5
     ! lats, levels, time)
     real(real32), dimension(:, :, :, :), allocatable :: relative_humidity
 
-    ! Profile height in meters, dimensioned as (lons, lats, levels, time)
+    ! Geopotential height profile in meters, dimensioned as (lons, lats, levels, time)
     real(real32), dimension(:, :, :, :), allocatable :: height
 
     ! TODO: cloud water mixing ratio (profile)? Looks like this is only used to
     ! convert to "rhocwat" (cloud water density), and then with temperature, to
     ! "rhol" and "rhoi" (liquid and ice components of the density)
 
-    ! TODO: surface temperature and surface relative humidity
-
     ! Surface pressure in hPa, dimensioned as (lons, lats, time)
     real(real32), dimension(:, :, :), allocatable :: surface_pressure
+
+    ! 2-meter air temperature in kelvin, dimensioned as (lons, lats, time)
+    real(real32), dimension(:, :, :), allocatable :: surface_temperature
+
+    ! 2-meter relative humidity in percentage, dimensioned as (lons, lats, time)
+    real(real32), dimension(:, :, :), allocatable :: surface_relative_humidity
+
+    ! Geopotential height at the surface in meters, dimensioned as (lons, lats, time)
+    real(real32), dimension(:, :, :), allocatable :: surface_height
 
     ! Total column water vapor in kg/m^2, dimensioned as (lons, lats, time)
     real(real32), dimension(:, :, :), allocatable :: columnar_water_vapor
@@ -104,6 +109,9 @@ contains
         self%relative_humidity(lon_len, lat_len, level_len, time_len), &
         self%height(lon_len, lat_len, level_len, time_len), &
         self%surface_pressure(lon_len, lat_len, time_len), &
+        self%surface_temperature(lon_len, lat_len, time_len), &
+        self%surface_relative_humidity(lon_len, lat_len, time_len), &
+        self%surface_height(lon_len, lat_len, time_len), &
         self%columnar_water_vapor(lon_len, lat_len, time_len), &
         self%columnar_cloud_liquid(lon_len, lat_len, time_len))
     end if
@@ -136,6 +144,9 @@ contains
 
     allocate(packed_short_3d(lon_len, lat_len, time_len))
     call unpack_variable_3d(ncid, "sp", packed_short_3d, self%surface_pressure)
+    call unpack_variable_3d(ncid, "t2m", packed_short_3d, self%surface_temperature)
+    call unpack_variable_3d(ncid, "d2m", packed_short_3d, self%surface_relative_humidity)
+    call unpack_variable_3d(ncid, "z", packed_short_3d, self%surface_height)
     call unpack_variable_3d(ncid, "tcwv", packed_short_3d, self%columnar_water_vapor)
     call unpack_variable_3d(ncid, "tclw", packed_short_3d, self%columnar_cloud_liquid)
     deallocate(packed_short_3d)
@@ -144,9 +155,16 @@ contains
     ! Convert geopotential to geopotential height
     ! (https://apps.ecmwf.int/codes/grib/param-db?id=129)
     self%height = self%height * INV_STANDARD_GRAVITY
+    self%surface_height = self%surface_height * INV_STANDARD_GRAVITY
 
     ! Convert surface pressure from Pa to hPa
     self%surface_pressure = self%surface_pressure * 1e-2
+
+    ! Convert dewpoint at 2 m to relative humidity at 2 m
+    ! http://bmcnoldy.rsmas.miami.edu/Humidity.html
+    ! However, rather than using the "Magnus approximation" I use the Buck equation.
+    self%surface_relative_humidity = 100. &
+      * buck_vap(self%surface_relative_humidity) / buck_vap(self%surface_temperature)
 
     ! The latitudes/longitudes need to be adjusted. In the ERA5 files, the
     ! latitudes are in *descending* order from 90 to -90, and while the longitudes
@@ -159,6 +177,9 @@ contains
     self%relative_humidity = cshift(self%relative_humidity(:, lat_len:1:-1, :, :), lon_len / 2, 1)
     self%height = cshift(self%height(:, lat_len:1:-1, :, :), lon_len / 2, 1)
     self%surface_pressure = cshift(self%surface_pressure(:, lat_len:1:-1, :), lon_len / 2, 1)
+    self%surface_temperature = cshift(self%surface_temperature(:, lat_len:1:-1, :), lon_len / 2, 1)
+    self%surface_relative_humidity = cshift(self%surface_relative_humidity(:, lat_len:1:-1, :), lon_len / 2, 1)
+    self%surface_height = cshift(self%surface_height(:, lat_len:1:-1, :), lon_len / 2, 1)
     self%columnar_water_vapor = cshift(self%columnar_water_vapor(:, lat_len:1:-1, :), lon_len / 2, 1)
     self%columnar_cloud_liquid = cshift(self%columnar_cloud_liquid(:, lat_len:1:-1, :), lon_len / 2, 1)
   end subroutine read_era5_data
@@ -169,7 +190,9 @@ contains
 
     deallocate(self%levels, self%lats, self%lons, self%time, &
       self%temperature, self%relative_humidity, self%height, &
-      self%surface_pressure, self%columnar_water_vapor, self%columnar_cloud_liquid)
+      self%surface_pressure, self%surface_temperature, &
+      self%surface_relative_humidity, self%surface_height, &
+      self%columnar_water_vapor, self%columnar_cloud_liquid)
   end subroutine free_era5_data
 
   ! -------------------------------------------------------------------------------
