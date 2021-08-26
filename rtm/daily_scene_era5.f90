@@ -2,8 +2,8 @@ module daily_scene_era5
   use, intrinsic :: iso_fortran_env, only: int32, real32, real64, ERROR_UNIT
   use, intrinsic :: ieee_arithmetic, only: ieee_value, ieee_quiet_nan
   use atms_abs_routines, only: atm_tran, fdcldabs, fdabscoeff
-  use month_day, only: find_month_day
   use read_era5, only: Era5DailyData
+  use time_conversions, only: yo_to_ymd
   use wvap_convert, only: goff_gratch_vap
   use netcdf
   implicit none
@@ -86,7 +86,7 @@ contains
          self%tb_up(NUM_LON, NUM_LAT, NUM_FREQ, NUM_HR), &
          self%tb_down(NUM_LON, NUM_LAT, NUM_FREQ, NUM_HR))
 
-    call find_month_day(year, doy, month, day)
+    call yo_to_ymd(year, doy, month, day)
 
     ! Read ERA5 surface/profile data for the day
     call system_clock(tick, clock_rate)
@@ -171,7 +171,7 @@ contains
     write(timestamp, '(I4, "-", I2.2, "-", I2.2, " ", I2.2, ":", I2.2, ":", I2.2, A5)') &
          time_vals(1), time_vals(2), time_vals(3), time_vals(5), time_vals(6), time_vals(7), time_zone
 
-    call find_month_day(scene%year, scene%doy, month, day)
+    call yo_to_ymd(scene%year, scene%doy, month, day)
     write(time_start, '(I4, "-", I2.2, "-", I2.2, " 00:00:00Z")') scene%year, month, day
     write(time_end, '(I4, "-", I2.2, "-", I2.2, " 23:59:59Z")') scene%year, month, day
     write(epoch, '(I4, "-", I2.2, "-", I2.2, " 00:00:00 +0000")') scene%year, month, day
