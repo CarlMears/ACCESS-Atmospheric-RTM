@@ -18,12 +18,12 @@ module daily_scene_ncep
   real(real64), parameter :: DLAT = 1.0, DLON = 1.0
   real(real64), parameter :: LAT0 = -90, LON0 = -180
 
-  ! Nominal Earth incidence angle in degrees
-  real(real32), parameter :: EIA_NOMINAL = 53.
+  ! Reference frequencies (in GHz) to use
+  integer, parameter :: NUM_FREQ = 7
+  real(real32), dimension(NUM_FREQ), parameter :: REF_FREQ = [1.41, 6.8, 10.7, 18.7, 23.8, 37.0, 89.0]
 
-  ! Frequencies (in GHz) to use
-  integer, parameter :: NUM_FREQ = 4
-  real(real32), dimension(NUM_FREQ), parameter :: FREQS = [10.85, 18.85, 23.8, 36.75]
+  ! Reference Earth incidence angle to use for each reference frequency (in degrees)
+  real(real32), dimension(NUM_FREQ), parameter :: REF_EIA = [40., 53., 53., 53., 53., 53., 53.]
 
   ! Daily scene data
   type DailySceneDataNcep
@@ -35,6 +35,7 @@ module daily_scene_ncep
      real(real64), dimension(NUM_LAT) :: lat
      real(real64), dimension(NUM_LON) :: lon
      real(real64), dimension(NUM_FREQ) :: freq
+     real(real64), dimension(NUM_FREQ) :: eia
 
      ! These are dimensioned as (lon, lat, hour)
      real(real32), dimension(:, :, :), allocatable :: col_vapor, col_water
@@ -67,7 +68,8 @@ contains
     self%year = year
     self%doy = doy
     self%hour = HOURS
-    self%freq = FREQS
+    self%freq = REF_FREQ
+    self%eia = REF_EIA
     self%lat = [(LAT0 + DLAT * ilat, ilat = 0, NUM_LAT - 1)]
     self%lon = [(LON0 + DLON * ilon, ilon = 0, NUM_LON - 1)]
 
@@ -97,7 +99,7 @@ contains
 
              do ifreq = 1, NUM_FREQ
                 call atmo_params(colvap, pwat, p, t, pv, rhol, z, ibegin, &
-                     EIA_NOMINAL, real(self%freq(ifreq), real32), tran, tb_up, tb_down)
+                     REF_EIA(ifreq), REF_FREQ(ifreq), tran, tb_up, tb_down)
 
                 self%tran(ilon, ilat, ifreq, ihour) = tran
                 self%tb_up(ilon, ilat, ifreq, ihour) = tb_up
@@ -181,7 +183,6 @@ contains
     call handle_nc_err(nf90_put_att(ncid, NF90_GLOBAL, "time_coverage_start", time_start))
     call handle_nc_err(nf90_put_att(ncid, NF90_GLOBAL, "time_coverage_end", time_end))
     call handle_nc_err(nf90_put_att(ncid, NF90_GLOBAL, "standard_name_vocabulary", "CF Standard Name Table v64"))
-    call handle_nc_err(nf90_put_att(ncid, NF90_GLOBAL, "nominal_sensor_incidence_angle", EIA_NOMINAL))
 
     ! Define dimensions
     call handle_nc_err(nf90_def_dim(ncid, "hour", NUM_HR, dim_hour))
@@ -215,6 +216,12 @@ contains
     call handle_nc_err(nf90_put_att(ncid, varid, "long_name", "frequency"))
     call handle_nc_err(nf90_put_att(ncid, varid, "units", "GHz"))
 
+    call handle_nc_err(nf90_def_var(ncid, "eia", NF90_DOUBLE, dim_freq, varid))
+    call handle_nc_err(nf90_put_var(ncid, varid, scene%eia))
+    call handle_nc_err(nf90_put_att(ncid, varid, "standard_name", "sensor_zenith_angle"))
+    call handle_nc_err(nf90_put_att(ncid, varid, "long_name", "incidence angle"))
+    call handle_nc_err(nf90_put_att(ncid, varid, "units", "degree"))
+
     ! Define and write the datasets and their attributes
     call handle_nc_err(nf90_def_var(ncid, "col_vapor", NF90_FLOAT, [dim_lon, dim_lat, dim_hour], varid, &
          deflate_level=2, shuffle=.true.))
@@ -237,7 +244,6 @@ contains
     call handle_nc_err(nf90_put_var(ncid, varid, scene%tran))
     call handle_nc_err(nf90_put_att(ncid, varid, "long_name", "atmospheric transmissivity"))
     call handle_nc_err(nf90_put_att(ncid, varid, "coordinates", "lat lon"))
-    call handle_nc_err(nf90_put_att(ncid, varid, "nominal_sensor_incidence_angle", EIA_NOMINAL))
 
     call handle_nc_err(nf90_def_var(ncid, "tb_up", NF90_FLOAT, [dim_lon, dim_lat, dim_freq, dim_hour], varid, &
          deflate_level=2, shuffle=.true.))
@@ -245,7 +251,6 @@ contains
     call handle_nc_err(nf90_put_att(ncid, varid, "long_name", "upwelling brightness temperature"))
     call handle_nc_err(nf90_put_att(ncid, varid, "units", "kelvin"))
     call handle_nc_err(nf90_put_att(ncid, varid, "coordinates", "lat lon"))
-    call handle_nc_err(nf90_put_att(ncid, varid, "nominal_sensor_incidence_angle", EIA_NOMINAL))
 
     call handle_nc_err(nf90_def_var(ncid, "tb_down", NF90_FLOAT, [dim_lon, dim_lat, dim_freq, dim_hour], varid, &
          deflate_level=2, shuffle=.true.))
@@ -253,7 +258,6 @@ contains
     call handle_nc_err(nf90_put_att(ncid, varid, "long_name", "downwelling brightness temperature"))
     call handle_nc_err(nf90_put_att(ncid, varid, "units", "kelvin"))
     call handle_nc_err(nf90_put_att(ncid, varid, "coordinates", "lat lon"))
-    call handle_nc_err(nf90_put_att(ncid, varid, "nominal_sensor_incidence_angle", EIA_NOMINAL))
 
     call handle_nc_err(nf90_close(ncid))
   end subroutine write_scene
