@@ -165,7 +165,7 @@ contains
     call handle_nc_err(nf90_create(filename_out, ior(NF90_CLOBBER, NF90_NETCDF4), ncid))
 
     ! Define global attributes
-    call handle_nc_err(nf90_put_att(ncid, NF90_GLOBAL, "Conventions", "CF-1.8,ACDD-1.3"))
+    call handle_nc_err(nf90_put_att(ncid, NF90_GLOBAL, "Conventions", "CF-1.9,ACDD-1.3"))
     call handle_nc_err(nf90_put_att(ncid, NF90_GLOBAL, "title", "ACCESS RTM output"))
     call handle_nc_err(nf90_put_att(ncid, NF90_GLOBAL, "institution", "REMSS"))
     call handle_nc_err(nf90_put_att(ncid, NF90_GLOBAL, "history", trim(history)))
@@ -182,7 +182,7 @@ contains
     call handle_nc_err(nf90_put_att(ncid, NF90_GLOBAL, "geospatial_lon_max", 180.0_real64))
     call handle_nc_err(nf90_put_att(ncid, NF90_GLOBAL, "time_coverage_start", time_start))
     call handle_nc_err(nf90_put_att(ncid, NF90_GLOBAL, "time_coverage_end", time_end))
-    call handle_nc_err(nf90_put_att(ncid, NF90_GLOBAL, "standard_name_vocabulary", "CF Standard Name Table v64"))
+    call handle_nc_err(nf90_put_att(ncid, NF90_GLOBAL, "standard_name_vocabulary", "CF Standard Name Table v78"))
 
     ! Define dimensions
     call handle_nc_err(nf90_def_dim(ncid, "hour", NUM_HR, dim_hour))
