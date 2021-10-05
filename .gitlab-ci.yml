@@ -1,15 +1,34 @@
-build_rocky:
+# build_rocky:
+#   stage: build
+#   image: quay.io/rockylinux/rockylinux:8
+#   before_script:
+#     - echo -e "section_start:$(date +%s):dnf[collapsed=true]\r\e[0KInstalling dependencies"
+#     - dnf -y install dnf-plugins-core epel-release
+#     - dnf config-manager --set-enabled powertools
+#     - dnf -y install meson ninja-build gcc-gfortran netcdf-fortran-devel
+#     - echo -e "section_end:$(date +%s):dnf\r\e[0K"
+#   script:
+#     - meson setup build rtm
+#     - meson compile -C build/
+
+build_package:
   stage: build
-  image: quay.io/rockylinux/rockylinux:8
+  image: python:3.9-slim
+  needs: []
+  cache:
+    paths:
+      - .cache/pip
+  variables:
+    PIP_CACHE_DIR: "${CI_PROJECT_DIR}/.cache/pip"
   before_script:
-    - echo -e "section_start:$(date +%s):dnf[collapsed=true]\r\e[0KInstalling dependencies"
-    - dnf -y install dnf-plugins-core epel-release
-    - dnf config-manager --set-enabled powertools
-    - dnf -y install meson ninja-build gcc-gfortran netcdf-fortran-devel
-    - echo -e "section_end:$(date +%s):dnf\r\e[0K"
+    - python --version
+    - pip install --upgrade pip
+    - pip install --progress-bar=off build
   script:
-    - meson setup build rtm
-    - meson compile -C build/
+    - python -m build
+  artifacts:
+    paths:
+      - dist/*
 
 format:
   stage: test
@@ -25,7 +44,7 @@ format:
     - pip install --upgrade pip
     - pip install --progress-bar=off black
   script:
-    - black --check .
+    - black --check access-atmosphere
 
 lint:
   stage: test
@@ -41,9 +60,9 @@ lint:
     - pip install --upgrade pip
     - pip install --progress-bar=off flake8 pycodestyle pydocstyle
   script:
-    - flake8 --count .
-    - pycodestyle -v .
-    - pydocstyle -v .
+    - flake8 --count access-atmosphere
+    - pycodestyle -v access-atmosphere
+    - pydocstyle -v access-atmosphere
 
 mypy:
   stage: test
@@ -63,7 +82,7 @@ mypy:
       --junit-xml mypy.junit.xml
       --cobertura-xml-report .
       --lineprecision-report .
-      ./
+      access-atmosphere/
   artifacts:
     paths:
       - mypy.junit.xml
@@ -73,25 +92,25 @@ mypy:
       junit: mypy.junit.xml
       cobertura: cobertura.xml
 
-package-image:
-  stage: deploy
-  needs: []
-  image: quay.io/podman/stable
-  before_script:
-    - podman version
-  script:
-    - echo "${CI_REGISTRY_PASSWORD}" | podman login --tls-verify=false --username "${CI_REGISTRY_USER}" --password-stdin "${CI_REGISTRY}"
-    - >
-      podman build
-      --format docker
-      --tag "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}"
-      --build-arg=version="${CI_COMMIT_REF_NAME}"
-      --build-arg=revision="${CI_COMMIT_SHORT_SHA}"
-      --build-arg=source_date="$(git log -1 --pretty=%ci)"
-      --build-arg=build_date="$(date --utc '+%Y-%m-%d %H:%M:%S%z')"
-      ./
-    - podman push --tls-verify=false "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}" "docker://${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}"
-    - >
-      if [[ "${CI_COMMIT_REF_NAME}" == "master" ]]; then
-      podman push --tls-verify=false "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}" "docker://${CI_REGISTRY_IMAGE}:latest";
-      fi
+# package-image:
+#   stage: deploy
+#   needs: []
+#   image: quay.io/podman/stable
+#   before_script:
+#     - podman version
+#   script:
+#     - echo "${CI_REGISTRY_PASSWORD}" | podman login --tls-verify=false --username "${CI_REGISTRY_USER}" --password-stdin "${CI_REGISTRY}"
+#     - >
+#       podman build
+#       --format docker
+#       --tag "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}"
+#       --build-arg=version="${CI_COMMIT_REF_NAME}"
+#       --build-arg=revision="${CI_COMMIT_SHORT_SHA}"
+#       --build-arg=source_date="$(git log -1 --pretty=%ci)"
+#       --build-arg=build_date="$(date --utc '+%Y-%m-%d %H:%M:%S%z')"
+#       ./
+#     - podman push --tls-verify=false "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}" "docker://${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}"
+#     - >
+#       if [[ "${CI_COMMIT_REF_NAME}" == "master" ]]; then
+#       podman push --tls-verify=false "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}" "docker://${CI_REGISTRY_IMAGE}:latest";
+#       fi
