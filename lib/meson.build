@@ -54,7 +54,7 @@ endif
 openmp = dependency('openmp', required : false)
 
 # -----------------------
-shared_library('access_rtm',
+static_library('access_rtm',
     sources : [
         'access_rtm.f90',
         'atms_abs_routines.f90',
@@ -65,3 +65,6 @@ shared_library('access_rtm',
         'wvap_convert.f90',
     ],
     dependencies : [openmp])
+
+configure_file(input: 'access_rtm.h', output: 'access_rtm.h', copy: true)
+configure_file(input: 'build_module.py', output: 'build_module.py', copy: true)
