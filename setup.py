@@ -1,24 +1,38 @@
 """Setuptools config for access-atmosphere."""
 
-from setuptools import setup, Extension
-from Cython.Build import cythonize
+from numpy.distutils.core import Extension, setup
 
 extensions = [
-    Extension("rtm", ["lib/rtm.pyx"], libraries=["gfortran", "m"])
+    Extension(
+        name="access_atmosphere.rtm",
+        # Note the order here is important
+        sources=[
+            "lib/access_rtm.pyf",
+            "lib/trig_degrees.f90",
+            "lib/dielectric_meissner.f90",
+            "lib/column.f90",
+            "lib/time_conversions.f90",
+            "lib/wvap_convert.f90",
+            "lib/atms_abs_routines.f90",
+            "lib/access_rtm.f90",
+        ],
+        extra_f90_compile_args=["-std=f2018", "-fopenmp"],
+        extra_link_args=["-fopenmp"],
+    )
 ]
 
 setup(
     name="access-atmosphere",
     version="0.0.1",
-    packages=["access-atmosphere"],
+    packages=["access_atmosphere"],
     python_requires=">=3.9",
     install_requires=[
         "cdsapi",
+        "numpy",
     ],
     author="Richard Lindsley",
     author_email="lindsley@remss.com",
     url="http://gitlab.remss.com/access/atmospheric-rtm/",
     include_package_data=True,
-    ext_modules=cythonize(extensions, compiler_directives={"language_level": "3"}),
-    zip_safe=False,
+    ext_modules=extensions,
 )

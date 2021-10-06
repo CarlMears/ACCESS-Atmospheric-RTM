@@ -1,3 +1,7 @@
+! This is the public interface to the RTM
+!
+! Sadly, due to the limitations of f2py, derived types are not supported.
+
 module access_rtm
   use, intrinsic :: iso_fortran_env, only: int32, real32, real64, ERROR_UNIT
   use, intrinsic :: iso_c_binding, only: c_int, c_int32_t, c_ptr, c_f_pointer
@@ -7,7 +11,7 @@ module access_rtm
   use wvap_convert, only: goff_gratch_vap
   implicit none
   private
-  public :: Era5DailyData, RtmDailyData, compute_rtm
+  public :: NMAX, compute_rtm
 
   ! ! Number of hours used per day (TODO: probably increase to 24 later)
   ! integer, parameter :: NUM_HR = 2
@@ -28,148 +32,76 @@ module access_rtm
   ! Maximum number of pressure levels to use
   integer, parameter :: NMAX = 26
 
-  ! This is the C-compatible derived type for the ERA5 daily data
-  type, bind(C) :: Era5DailyData
-    ! Lengths of the dimensions
-    integer(c_int32_t) :: num_time, num_lats, num_lons, num_levels
+  ! type :: Era5DailyData
+  !   ! Lengths of the dimensions
+  !   integer(int32) :: num_time, num_lats, num_lons, num_levels
 
-    ! Pressure level in hPa, dimensioned as num_levels. They should be in
-    ! descending order (e.g., 1000 to 10).
-    type(c_ptr) :: levels
+  !   ! Pressure level in hPa, dimensioned as num_levels. They should be in
+  !   ! descending order (e.g., 1000 to 10).
+  !   integer(int32), dimension(:), pointer :: levels
 
-    ! Latitude in degrees North, dimensioned as num_lats. They should be in
-    ! ascending order (e.g., -90 to 90).
-    type(c_ptr) :: lats
+  !   ! Latitude in degrees North, dimensioned as num_lats. They should be in
+  !   ! ascending order (e.g., -90 to 90).
+  !   real(real32), dimension(:), pointer :: lats
 
-    ! Longitude in degrees East, dimensioned as num_lons. They should be in
-    ! ascending order (e.g., -180 to 180).
-    type(c_ptr) :: lons
+  !   ! Longitude in degrees East, dimensioned as num_lons. They should be in
+  !   ! ascending order (e.g., -180 to 180).
+  !   real(real32), dimension(:), pointer :: lons
 
-    ! Hours since 1900-01-01, dimensioned as num_time
-    type(c_ptr) :: time
+  !   ! Hours since 1900-01-01, dimensioned as num_time
+  !   integer(int32), dimension(:), pointer :: time
 
-    ! Profile air temperature in Kelvin, dimensioned as (lons, lats, levels, time)
-    type(c_ptr) :: temperature
+  !   ! Profile air temperature in Kelvin, dimensioned as (lons, lats, levels, time)
+  !   real(real32), dimension(:, :, :, :), pointer :: temperature
 
-    ! Profile relative humidity in percentage (0 to 100), dimensioned as (lons,
-    ! lats, levels, time)
-    type(c_ptr) :: relative_humidity
+  !   ! Profile relative humidity in percentage (0 to 100), dimensioned as (lons,
+  !   ! lats, levels, time)
+  !   real(real32), dimension(:, :, :, :), pointer :: relative_humidity
 
-    ! Geopotential height profile in meters, dimensioned as (lons, lats, levels, time)
-    type(c_ptr) :: height
+  !   ! Geopotential height profile in meters, dimensioned as (lons, lats, levels, time)
+  !   real(real32), dimension(:, :, :, :), pointer :: height
 
-    ! Profile specific liquid water content (from clouds) in kg/kg, dimensioned
-    ! as (lons, lats, levels, time)
-    type(c_ptr) :: liquid_content
+  !   ! Profile specific liquid water content (from clouds) in kg/kg, dimensioned
+  !   ! as (lons, lats, levels, time)
+  !   real(real32), dimension(:, :, :, :), pointer :: liquid_content
 
-    ! Surface pressure in hPa, dimensioned as (lons, lats, time)
-    type(c_ptr) :: surface_pressure
+  !   ! Surface pressure in hPa, dimensioned as (lons, lats, time)
+  !   real(real32), dimension(:, :, :), pointer :: surface_pressure
 
-    ! 2-meter air temperature in kelvin, dimensioned as (lons, lats, time)
-    type(c_ptr) :: surface_temperature
+  !   ! 2-meter air temperature in kelvin, dimensioned as (lons, lats, time)
+  !   real(real32), dimension(:, :, :), pointer :: surface_temperature
 
-    ! 2-meter relative humidity in percentage, dimensioned as (lons, lats, time)
-    type(c_ptr) :: surface_relative_humidity
+  !   ! 2-meter relative humidity in percentage, dimensioned as (lons, lats, time)
+  !   real(real32), dimension(:, :, :), pointer :: surface_relative_humidity
 
-    ! Geopotential height at the surface in meters, dimensioned as (lons, lats, time)
-    type(c_ptr) :: surface_height
+  !   ! Geopotential height at the surface in meters, dimensioned as (lons, lats, time)
+  !   real(real32), dimension(:, :, :), pointer :: surface_height
 
-    ! Total column water vapor in kg/m^2, dimensioned as (lons, lats, time)
-    type(c_ptr) :: columnar_water_vapor
+  !   ! Total column water vapor in kg/m^2, dimensioned as (lons, lats, time)
+  !   real(real32), dimension(:, :, :), pointer :: columnar_water_vapor
 
-    ! Total column cloud liquid water in kg/m^2, dimensioned as (lons, lats, time)
-    type(c_ptr) :: columnar_cloud_liquid
-  end type Era5DailyData
+  !   ! Total column cloud liquid water in kg/m^2, dimensioned as (lons, lats, time)
+  !   real(real32), dimension(:, :, :), pointer :: columnar_cloud_liquid
+  ! end type Era5DailyData
 
-  type :: Era5DailyData_f
-    ! Lengths of the dimensions
-    integer(int32) :: num_time, num_lats, num_lons, num_levels
+  ! ! Output values after computing the atmospheric RTM.
+  ! type RtmDailyData
+  !   ! Lengths of the dimensions
+  !   integer(int32) :: num_hour, num_lat, num_lon, num_freq
 
-    ! Pressure level in hPa, dimensioned as num_levels. They should be in
-    ! descending order (e.g., 1000 to 10).
-    integer(int32), dimension(:), pointer :: levels
+  !   ! Coordinate variables. Both freq/eia have the same length.
+  !   integer(int32), dimension(:), pointer :: hour
+  !   real(real32), dimension(:), pointer :: lat
+  !   real(real32), dimension(:), pointer :: lon
+  !   real(real32), dimension(:), pointer :: freq
+  !   real(real32), dimension(:), pointer :: eia
 
-    ! Latitude in degrees North, dimensioned as num_lats. They should be in
-    ! ascending order (e.g., -90 to 90).
-    real(real32), dimension(:), pointer :: lats
+  !   ! These are dimensioned as (lon, lat, hour)
+  !   real(real32), dimension(:, :, :), pointer :: col_vapor, col_water
 
-    ! Longitude in degrees East, dimensioned as num_lons. They should be in
-    ! ascending order (e.g., -180 to 180).
-    real(real32), dimension(:), pointer :: lons
-
-    ! Hours since 1900-01-01, dimensioned as num_time
-    integer(int32), dimension(:), pointer :: time
-
-    ! Profile air temperature in Kelvin, dimensioned as (lons, lats, levels, time)
-    real(real32), dimension(:, :, :, :), pointer :: temperature
-
-    ! Profile relative humidity in percentage (0 to 100), dimensioned as (lons,
-    ! lats, levels, time)
-    real(real32), dimension(:, :, :, :), pointer :: relative_humidity
-
-    ! Geopotential height profile in meters, dimensioned as (lons, lats, levels, time)
-    real(real32), dimension(:, :, :, :), pointer :: height
-
-    ! Profile specific liquid water content (from clouds) in kg/kg, dimensioned
-    ! as (lons, lats, levels, time)
-    real(real32), dimension(:, :, :, :), pointer :: liquid_content
-
-    ! Surface pressure in hPa, dimensioned as (lons, lats, time)
-    real(real32), dimension(:, :, :), pointer :: surface_pressure
-
-    ! 2-meter air temperature in kelvin, dimensioned as (lons, lats, time)
-    real(real32), dimension(:, :, :), pointer :: surface_temperature
-
-    ! 2-meter relative humidity in percentage, dimensioned as (lons, lats, time)
-    real(real32), dimension(:, :, :), pointer :: surface_relative_humidity
-
-    ! Geopotential height at the surface in meters, dimensioned as (lons, lats, time)
-    real(real32), dimension(:, :, :), pointer :: surface_height
-
-    ! Total column water vapor in kg/m^2, dimensioned as (lons, lats, time)
-    real(real32), dimension(:, :, :), pointer :: columnar_water_vapor
-
-    ! Total column cloud liquid water in kg/m^2, dimensioned as (lons, lats, time)
-    real(real32), dimension(:, :, :), pointer :: columnar_cloud_liquid
-  end type Era5DailyData_f
-
-  ! Output values after computing the atmospheric RTM.
-  type, bind(C) :: RtmDailyData
-    ! Lengths of the dimensions
-    integer(c_int32_t) :: num_hour, num_lat, num_lon, num_freq
-
-    ! Coordinate variables. Both freq/eia have the same length.
-    type(c_ptr) :: hour
-    type(c_ptr) :: lat
-    type(c_ptr) :: lon
-    type(c_ptr) :: freq
-    type(c_ptr) :: eia
-
-    ! These are dimensioned as (lon, lat, hour)
-    type(c_ptr) :: col_vapor, col_water
-
-    ! These are dimensioned as (lon, lat, freq, hour)
-    type(c_ptr) :: tran, tb_up, tb_down
-  end type RtmDailyData
-
-  ! Output values after computing the atmospheric RTM.
-  type RtmDailyData_f
-    ! Lengths of the dimensions
-    integer(int32) :: num_hour, num_lat, num_lon, num_freq
-
-    ! Coordinate variables. Both freq/eia have the same length.
-    integer(int32), dimension(:), pointer :: hour
-    real(real32), dimension(:), pointer :: lat
-    real(real32), dimension(:), pointer :: lon
-    real(real32), dimension(:), pointer :: freq
-    real(real32), dimension(:), pointer :: eia
-
-    ! These are dimensioned as (lon, lat, hour)
-    real(real32), dimension(:, :, :), pointer :: col_vapor, col_water
-
-    ! These are dimensioned as (lon, lat, freq, hour)
-    real(real32), dimension(:, :, :, :), pointer :: tran, tb_up, tb_down
-  end type RtmDailyData_f
+  !   ! These are dimensioned as (lon, lat, freq, hour)
+  !   real(real32), dimension(:, :, :, :), pointer :: tran, tb_up, tb_down
+  ! end type RtmDailyData
 
 contains
 
@@ -177,152 +109,35 @@ contains
   ! Compute the RTM
   !
   ! Returns 0 if all okay
-  function compute_rtm(atmo_data_c, rtm_data_c) bind(C)
-    type(Era5DailyData), intent(in) :: atmo_data_c
-    type(RtmDailyData), intent(inout) :: rtm_data_c
-    integer(c_int) :: compute_rtm
+  subroutine compute_rtm(num_points, num_freq, &
+    levels, temperature, height, relative_humidity, liquid_content, &
+    surface_temperature, surface_height, surface_relative_humidity, surface_pressure, &
+    eia, freq, tran, tb_up, tb_down)
+    integer, intent(in) :: num_points, num_freq
+    real(real32), dimension(NMAX), intent(in) :: levels
+    real(real32), dimension(num_points), intent(in) :: surface_temperature, surface_height, &
+      surface_relative_humidity, surface_pressure
+    real(real32), dimension(NMAX, num_points), intent(in) :: temperature, height, &
+      relative_humidity, liquid_content
+    real(real32), dimension(num_freq), intent(in) :: eia, freq
+    real(real32), dimension(num_freq, num_points), intent(out) :: tran, tb_up, tb_down
 
-    integer :: ihour, ilat, ilon, ifreq
-    integer :: ibegin
-
-    type(Era5DailyData_f) :: atmo_data
-    type(RtmDailyData_f) :: rtm_data
-
+    integer :: ibegin, ifreq, i
     real(real32), dimension(0:NMAX) :: p, t, pv, rhol, z
-    real(real32) :: tran, tb_up, tb_down
 
-    integer :: num_freq
-
-    ! Convert between C/Fortran inputs/outputs
-    compute_rtm = convert_atmo_data(atmo_data_c, atmo_data)
-    if (compute_rtm /= 0) then
-      write(ERROR_UNIT, *) "Couldn't convert input atmosphere data"
-      return
-    end if
-    compute_rtm = convert_rtm_data(rtm_data_c, rtm_data)
-    if (compute_rtm /= 0) then
-      write(ERROR_UNIT, *) "Couldn't convert output RTM data"
-      return
-    end if
-
-    ! Check that the output is properly allocated
-    if (size(rtm_data%hour) /= atmo_data%num_time &
-      .or. size(rtm_data%lat) /= atmo_data%num_lats &
-      .or. size(rtm_data%lon) /= atmo_data%num_lons) then
-        write(ERROR_UNIT, *) "Output sizes don't match input sizes"
-        compute_rtm = 1
-        return
-    else if (size(rtm_data%freq) /= size(rtm_data%eia)) then
-      write(ERROR_UNIT, *) "Output freq/eia sizes don't match"
-      compute_rtm = 1
-      return
-    ! else if (.not. all([allocated(rtm_data%col_vapor), ...]))
-    !   write(ERROR_UNIT, *) "Output values aren't allocated"
-    !   compute_rtm = 1
-    !   return
-    end if
-    
-    ! These coordinate variables are copied from the input, but the "freq" and
-    ! "eia" coordinate variables are presumed to be already set
-    rtm_data%hour = atmo_data%time
-    rtm_data%lat = atmo_data%lats
-    rtm_data%lon = atmo_data%lons
-
-    num_freq = size(rtm_data%freq)
-    
-    ! allocate(self%col_vapor(NUM_LON, NUM_LAT, NUM_HR), &
-    !      self%col_water(NUM_LON, NUM_LAT, NUM_HR), &
-    !      self%tran(NUM_LON, NUM_LAT, NUM_FREQ, NUM_HR), &
-    !      self%tb_up(NUM_LON, NUM_LAT, NUM_FREQ, NUM_HR), &
-    !      self%tb_down(NUM_LON, NUM_LAT, NUM_FREQ, NUM_HR))
-
-    do ihour = 1, atmo_data%num_time
-      !$omp parallel do collapse(2) private(ibegin, p, t, pv, rhol, z, tran, tb_up, tb_down)
-      do ilat = 1, atmo_data%num_lats
-        do ilon = 1, atmo_data%num_lons
-          rtm_data%col_vapor(ilon, ilat, ihour) = atmo_data%columnar_water_vapor(ilon, ilat, ihour)
-          rtm_data%col_water(ilon, ilat, ihour) = atmo_data%columnar_cloud_liquid(ilon, ilat, ihour)
-
-          call prepare_parameters(atmo_data, ilat, ilon, ihour, ibegin, p, t, pv, rhol, z)
-          do ifreq = 1, num_freq
-            call atmo_params(p, t, pv, rhol, z, ibegin, &
-              rtm_data%eia(ifreq), rtm_data%freq(ifreq), &
-              tran, tb_up, tb_down)
-
-              rtm_data%tran(ilon, ilat, ifreq, ihour) = tran
-              rtm_data%tb_up(ilon, ilat, ifreq, ihour) = tb_up
-              rtm_data%tb_down(ilon, ilat, ifreq, ihour) = tb_down
-           end do
-        end do
+    !$omp parallel do private(ibegin, p, t, pv, rhol, z)
+    do i = 1, num_points
+      call prepare_parameters(levels(:), surface_temperature(i), temperature(:, i), &
+        surface_height(i), height(:, i), &
+        surface_relative_humidity(i), relative_humidity(:, i), &
+        liquid_content(:, i), surface_pressure(i), &
+        ibegin, p, t, pv, rhol, z)
+      do ifreq = 1, num_freq
+        call atmo_params(p, t, pv, rhol, z, ibegin, eia(ifreq), freq(ifreq), &
+          tran(ifreq, i), tb_up(ifreq, i), tb_down(ifreq, i))
       end do
     end do
-  end function compute_rtm
-
-  ! Convert between the C and Fortran data
-  function convert_atmo_data(atmo_data_c, atmo_data)
-    type(Era5DailyData), intent(in) :: atmo_data_c
-    type(Era5DailyData_f), intent(out) :: atmo_data
-    integer :: convert_atmo_data
-
-    convert_atmo_data = 0
-    atmo_data%num_time = atmo_data_c%num_time
-    atmo_data%num_lats = atmo_data_c%num_lats
-    atmo_data%num_lons = atmo_data_c%num_lons
-    atmo_data%num_levels = atmo_data_c%num_levels
-
-    associate(num_levels => atmo_data_c%num_levels, &
-      num_time => atmo_data_c%num_time, &
-      num_lats => atmo_data_c%num_lats, &
-      num_lons => atmo_data_c%num_lons)
-      call c_f_pointer(atmo_data_c%levels, atmo_data%levels, [num_levels])
-      call c_f_pointer(atmo_data_c%lats, atmo_data%lats, [num_lats])
-      call c_f_pointer(atmo_data_c%lons, atmo_data%lons, [num_lons])
-      call c_f_pointer(atmo_data_c%time, atmo_data%time, [num_time])
-
-      call c_f_pointer(atmo_data_c%temperature, atmo_data%temperature, [num_lons, num_lats, num_levels, num_time])
-      call c_f_pointer(atmo_data_c%relative_humidity, atmo_data%relative_humidity, [num_lons, num_lats, num_levels, num_time])
-      call c_f_pointer(atmo_data_c%height, atmo_data%height, [num_lons, num_lats, num_levels, num_time])
-      call c_f_pointer(atmo_data_c%liquid_content, atmo_data%liquid_content, [num_lons, num_lats, num_levels, num_time])
-
-      call c_f_pointer(atmo_data_c%surface_pressure, atmo_data%surface_pressure, [num_lons, num_lats, num_time])
-      call c_f_pointer(atmo_data_c%surface_temperature, atmo_data%surface_temperature, [num_lons, num_lats, num_time])
-      call c_f_pointer(atmo_data_c%surface_relative_humidity, atmo_data%surface_relative_humidity, [num_lons, num_lats, num_time])
-      call c_f_pointer(atmo_data_c%surface_height, atmo_data%surface_height, [num_lons, num_lats, num_time])
-      call c_f_pointer(atmo_data_c%columnar_water_vapor, atmo_data%columnar_water_vapor, [num_lons, num_lats, num_time])
-      call c_f_pointer(atmo_data_c%columnar_cloud_liquid, atmo_data%columnar_cloud_liquid, [num_lons, num_lats, num_time])
-    end associate
-  end function convert_atmo_data
-
-  ! Convert between the C and Fortran data
-  function convert_rtm_data(rtm_data_c, rtm_data)
-    type(RtmDailyData), intent(in) :: rtm_data_c
-    type(RtmDailyData_f), intent(out) :: rtm_data
-    integer :: convert_rtm_data
-
-    convert_rtm_data = 0
-    rtm_data%num_hour = rtm_data_c%num_hour
-    rtm_data%num_lat = rtm_data_c%num_lat
-    rtm_data%num_lon = rtm_data_c%num_lon
-    rtm_data%num_freq = rtm_data_c%num_freq
-
-    associate(num_freq => rtm_data_c%num_freq, &
-      num_hour => rtm_data_c%num_hour, &
-      num_lat => rtm_data_c%num_lat, &
-      num_lon => rtm_data_c%num_lon)
-      call c_f_pointer(rtm_data_c%freq, rtm_data%freq, [num_freq])
-      call c_f_pointer(rtm_data_c%eia, rtm_data%eia, [num_freq])
-      call c_f_pointer(rtm_data_c%lat, rtm_data%lat, [num_lat])
-      call c_f_pointer(rtm_data_c%lon, rtm_data%lon, [num_lon])
-      call c_f_pointer(rtm_data_c%hour, rtm_data%hour, [num_hour])
-
-      call c_f_pointer(rtm_data_c%col_vapor, rtm_data%col_vapor, [num_lon, num_lat, num_hour])
-      call c_f_pointer(rtm_data_c%col_water, rtm_data%col_water, [num_lon, num_lat, num_hour])
-
-      call c_f_pointer(rtm_data_c%tran, rtm_data%tran, [num_lon, num_lat, num_freq, num_hour])
-      call c_f_pointer(rtm_data_c%tb_up, rtm_data%tb_up, [num_lon, num_lat, num_freq, num_hour])
-      call c_f_pointer(rtm_data_c%tb_down, rtm_data%tb_down, [num_lon, num_lat, num_freq, num_hour])
-    end associate
-  end function convert_rtm_data
+  end subroutine compute_rtm
 
   ! ! ----------------------------------------------------------------------
   ! ! Write a day's standard scene data to a netCDF compatible file
@@ -475,9 +290,12 @@ contains
 
   ! ----------------------------------------------------------------------
   ! From the ERA5 data, prepare these profile/surface parameters for the RTM
-  pure subroutine prepare_parameters(era5_data, ilat, ilon, itime, ibegin, p, t, pv, rhol, z)
-    type(Era5DailyData_f), intent(in) :: era5_data
-    integer, intent(in) :: ilat, ilon, itime
+  pure subroutine prepare_parameters(levels, surface_temperature, temperature, &
+    surface_height, height, surface_relative_humidity, relative_humidity, &
+    liquid_content, surface_pressure, &
+    ibegin, p, t, pv, rhol, z)
+    real(real32), intent(in) :: surface_temperature, surface_height, surface_relative_humidity, surface_pressure
+    real(real32), dimension(NMAX), intent(in) :: levels, temperature, height, relative_humidity, liquid_content
     integer, intent(out) :: ibegin
     real(real32), dimension(0:NMAX), intent(out) :: p, t, pv, rhol, z
 
@@ -503,31 +321,31 @@ contains
     real(real32), parameter :: eps_scale = (1 - epsilon) / epsilon
 
     p(0) = 0.
-    p(1:NMAX) = era5_data%levels(:)
+    p(1:NMAX) = levels(:)
 
-    t(0) = era5_data%surface_temperature(ilon, ilat, itime)
-    t(1:NMAX) = era5_data%temperature(ilon, ilat, 1:NMAX, itime)
+    t(0) = surface_temperature
+    t(1:NMAX) = temperature(1:NMAX)
 
-    hgt(0) = era5_data%surface_height(ilon, ilat, itime)
-    hgt(1:NMAX) = era5_data%height(ilon, ilat, 1:NMAX, itime)
+    hgt(0) = surface_height
+    hgt(1:NMAX) = height(1:NMAX)
 
-    rh(0) = era5_data%surface_relative_humidity(ilon, ilat, itime)
-    rh(1:NMAX) = era5_data%relative_humidity(ilon, ilat, 1:NMAX, itime)
+    rh(0) = surface_relative_humidity
+    rh(1:NMAX) = relative_humidity(1:NMAX)
 
     q_l(0) = 0.
-    q_l(1:NMAX) = era5_data%liquid_content(ilon, ilat, 1:NMAX, itime)
+    q_l(1:NMAX) = liquid_content(1:NMAX)
 
     ! Find "ibegin", or the starting index for the surface
     ibegin = -1
     do ipr = 1, NMAX
-      if (p(ipr) <= era5_data%surface_pressure(ilon, ilat, itime)) then
+      if (p(ipr) <= surface_pressure) then
         ibegin = ipr - 1
         exit
       end if
     end do
     if (ibegin < 0) error stop "Couldn't find ibegin"
 
-    p(ibegin) = era5_data%surface_pressure(ilon, ilat, itime)
+    p(ibegin) = surface_pressure
     t(ibegin) = t(0)
     hgt(ibegin) = hgt(0)
     rh(ibegin) = rh(0)

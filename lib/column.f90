@@ -1,5 +1,4 @@
 module columnar_int
-  use, intrinsic :: iso_fortran_env, only: real32, int32
   implicit none
   private
   public :: column
@@ -22,12 +21,12 @@ contains
   !     col [in unit/m]
   !
   subroutine column(nlevel,z,rho,ip,  col)
-    integer(int32), intent(in) :: nlevel, ip
-    real(real32), dimension(0:nlevel), intent(in) :: z, rho
-    real(real32), intent(out) :: col
+    integer(4), intent(in) :: nlevel, ip
+    real(4), dimension(0:nlevel), intent(in) :: z, rho
+    real(4), intent(out) :: col
 
-    integer(int32) :: i
-    real(real32) :: dz, avg
+    integer(4) :: i
+    real(4) :: dz, avg
 
     col = 0.
     do i=1,nlevel
@@ -42,6 +41,6 @@ contains
        endif
 
        col = col + avg*dz
-    enddo
+    end do
   end subroutine column
 end module columnar_int

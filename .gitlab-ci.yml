@@ -44,7 +44,7 @@ format:
     - pip install --upgrade pip
     - pip install --progress-bar=off black
   script:
-    - black --check access-atmosphere
+    - black --check access_atmosphere
 
 lint:
   stage: test
@@ -60,9 +60,9 @@ lint:
     - pip install --upgrade pip
     - pip install --progress-bar=off flake8 pycodestyle pydocstyle
   script:
-    - flake8 --count access-atmosphere
-    - pycodestyle -v access-atmosphere
-    - pydocstyle -v access-atmosphere
+    - flake8 --count access_atmosphere
+    - pycodestyle -v access_atmosphere
+    - pydocstyle -v access_atmosphere
 
 mypy:
   stage: test
@@ -82,7 +82,7 @@ mypy:
       --junit-xml mypy.junit.xml
       --cobertura-xml-report .
       --lineprecision-report .
-      access-atmosphere/
+      access_atmosphere/
   artifacts:
     paths:
       - mypy.junit.xml
