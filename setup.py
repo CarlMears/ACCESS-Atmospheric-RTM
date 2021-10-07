@@ -25,7 +25,7 @@ setup(
     name="access-atmosphere",
     version="0.0.1",
     packages=["access_atmosphere"],
-    python_requires=">=3.9",
+    python_requires=">=3.7",
     install_requires=[
         "cdsapi",
         "numpy",
