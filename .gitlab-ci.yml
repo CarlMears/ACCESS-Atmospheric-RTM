@@ -1,15 +1,16 @@
-# build_rocky:
-#   stage: build
-#   image: quay.io/rockylinux/rockylinux:8
-#   before_script:
-#     - echo -e "section_start:$(date +%s):dnf[collapsed=true]\r\e[0KInstalling dependencies"
-#     - dnf -y install dnf-plugins-core epel-release
-#     - dnf config-manager --set-enabled powertools
-#     - dnf -y install meson ninja-build gcc-gfortran netcdf-fortran-devel
-#     - echo -e "section_end:$(date +%s):dnf\r\e[0K"
-#   script:
-#     - meson setup build rtm
-#     - meson compile -C build/
+build-library:
+  stage: build
+  image: quay.io/rockylinux/rockylinux:8
+  needs: []
+  before_script:
+    - echo -e "section_start:$(date +%s):dnf[collapsed=true]\r\e[0KInstalling dependencies"
+    - dnf -y install dnf-plugins-core epel-release
+    - dnf config-manager --set-enabled powertools
+    - dnf -y install meson ninja-build gcc-gfortran netcdf-fortran-devel
+    - echo -e "section_end:$(date +%s):dnf\r\e[0K"
+  script:
+    - meson setup build lib
+    - meson compile -C build/
 
 build-linux:
   stage: build
@@ -123,6 +124,7 @@ mypy:
     reports:
       junit: mypy.junit.xml
       cobertura: cobertura.xml
+
 # package-image:
 #   stage: deploy
 #   needs: []

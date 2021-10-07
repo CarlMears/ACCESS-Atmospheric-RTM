@@ -65,6 +65,3 @@ static_library('access_rtm',
         'wvap_convert.f90',
     ],
     dependencies : [openmp])
-
-configure_file(input: 'access_rtm.h', output: 'access_rtm.h', copy: true)
-configure_file(input: 'build_module.py', output: 'build_module.py', copy: true)
