@@ -11,7 +11,7 @@
 #     - meson setup build rtm
 #     - meson compile -C build/
 
-build-package:
+build-linux:
   stage: build
   image: python:3.9
   needs: []
@@ -25,18 +25,30 @@ build-package:
     - apt-get install -y gfortran
     - python --version
     - pip install --upgrade pip
-    - pip install --progress-bar=off build auditwheel
+    - pip install --progress-bar=off build
   script:
     - python -m build
-    - auditwheel repair --plat manylinux_2_24_x86_64 --wheel-dir dist ./dist/access_atmosphere-*-linux_x86_64.whl
   artifacts:
     paths:
       - dist/*
 
-import-package:
+build-manylinux2014:
+  stage: build
+  image: quay.io/pypa/manylinux2014_x86_64
+  needs: [build-linux]
+  script:
+    - /opt/python/cp38-cp38/bin/python -m build
+    - /opt/python/cp39-cp39/bin/python -m build
+    - auditwheel repair -w dist/ ./dist/access_atmosphere-*-cp38-cp38-linux_x86_64.whl
+    - auditwheel repair -w dist/ ./dist/access_atmosphere-*-cp39-cp39-linux_x86_64.whl
+  artifacts:
+    paths:
+      - dist/*manylinux*.whl
+
+import-linux:
   stage: test
   image: python:3.9-slim
-  needs: [build-package]
+  needs: [build-linux]
   cache:
     paths:
       - .cache/pip
@@ -110,7 +122,6 @@ mypy:
     reports:
       junit: mypy.junit.xml
       cobertura: cobertura.xml
-
 # package-image:
 #   stage: deploy
 #   needs: []
