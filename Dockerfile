@@ -15,7 +15,7 @@
 # /mnt/ops1p/n for NCEP data. Plus either a bind-mount for the output data or a
 # volume.
 
-FROM docker.io/library/python:3.9-slim AS build
+FROM docker.io/library/python:3.9 AS build
 
 RUN apt-get update && \
     apt-get install -y gfortran
