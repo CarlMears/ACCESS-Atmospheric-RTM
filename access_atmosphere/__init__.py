@@ -3,8 +3,6 @@
 
 from typing import NamedTuple
 
-from . import rtm
-
 
 class AtmoParameters(NamedTuple):
     """Atmospheric radiative parameters.

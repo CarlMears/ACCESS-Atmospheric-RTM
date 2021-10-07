@@ -36,14 +36,15 @@ build-manylinux2014:
   stage: build
   image: quay.io/pypa/manylinux2014_x86_64
   needs: [build-linux]
+  parallel:
+    matrix:
+      - PYABI: [cp37-cp37m, cp38-cp38, cp39-cp39, cp310-cp310]
   script:
-    - /opt/python/cp38-cp38/bin/python -m build
-    - /opt/python/cp39-cp39/bin/python -m build
-    - auditwheel repair -w dist/ ./dist/access_atmosphere-*-cp38-cp38-linux_x86_64.whl
-    - auditwheel repair -w dist/ ./dist/access_atmosphere-*-cp39-cp39-linux_x86_64.whl
+    - /opt/python/$PYABI/bin/python -m build
+    - auditwheel repair -w dist/ ./dist/access_atmosphere-*-$PYABI-linux_x86_64.whl
   artifacts:
     paths:
-      - dist/*manylinux*.whl
+      - dist/*-$PYABI-manylinux*.whl
 
 import-linux:
   stage: test
@@ -59,7 +60,7 @@ import-linux:
     - pip install --upgrade pip
   script:
     - pip install --progress-bar=off ./dist/access_atmosphere-*-linux_x86_64.whl
-    - python -c 'import access_atmosphere; print(access_atmosphere.rtm)'
+    - python -c 'import access_atmosphere'
 
 format:
   stage: test
