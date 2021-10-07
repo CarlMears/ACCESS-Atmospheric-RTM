@@ -15,36 +15,27 @@
 # /mnt/ops1p/n for NCEP data. Plus either a bind-mount for the output data or a
 # volume.
 
-FROM quay.io/rockylinux/rockylinux:8 AS build
+FROM docker.io/library/python:3.9-slim AS build
 
-RUN dnf install -y dnf-plugins-core epel-release gcc-gfortran gcc-c++ && \
-    dnf config-manager --set-enabled powertools && \
-    dnf install -y meson ninja-build netcdf-fortran-devel
-
-WORKDIR /root
-COPY rtm rtm
-
-RUN meson setup --buildtype release build/ rtm/
-RUN meson compile -C build/
-
-FROM quay.io/rockylinux/rockylinux:8
-
-RUN dnf install -y dnf-plugins-core epel-release && \
-    dnf config-manager --set-enabled powertools && \
-    dnf install -y --nodocs libgfortran libgomp netcdf-fortran python39 python39-pip python39-wheel && \
-    dnf clean all && \
-    rm -rf /var/cache/dnf/*
-
-RUN pip3 install cdsapi
+RUN apt-get update && \
+    apt-get install -y gfortran
+RUN pip install --upgrade pip && pip install build
 
 WORKDIR /root
+COPY . .
 
+RUN python -m build
+
+FROM docker.io/library/python:3.9-slim
+
+RUN pip install --upgrade pip
+
+WORKDIR /root
 COPY --from=build \
-    /root/build/access_rtm \
-    /root/build/access_rtm_ncep \
-    /usr/local/bin/
+    /root/dist/*.whl \
+    /root/
 
-COPY download_era5.py .
+RUN pip install ./*.whl
 
 ARG version
 ARG revision
@@ -56,7 +47,7 @@ LABEL Maintainer="Richard Lindsley <lindsley@remss.com>" \
     "org.opencontainers.image.created"="$build_date" \
     "org.opencontainers.image.authors"="Richard Lindsley <lindsley@remss.com>" \
     "org.opencontainers.image.vendor"="Remote Sensing Systems" \
-    "org.opencontainers.image.url"="http://gitlab.remss.com/lindsley/access-atmospheric-rtm" \
-    "org.opencontainers.image.source"="http://gitlab.remss.com/lindsley/access-atmospheric-rtm" \
+    "org.opencontainers.image.url"="http://gitlab.remss.com/access/atmospheric-rtm" \
+    "org.opencontainers.image.source"="http://gitlab.remss.com/access/atmospheric-rtm" \
     "org.opencontainers.image.version"="$version" \
     "org.opencontainers.image.revision"="$revision"

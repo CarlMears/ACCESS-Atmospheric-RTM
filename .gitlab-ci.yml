@@ -11,7 +11,7 @@
 #     - meson setup build rtm
 #     - meson compile -C build/
 
-build_package:
+build-package:
   stage: build
   image: python:3.9-slim
   needs: []
@@ -21,6 +21,8 @@ build_package:
   variables:
     PIP_CACHE_DIR: "${CI_PROJECT_DIR}/.cache/pip"
   before_script:
+    - apt-get update
+    - apt-get install -y gfortran
     - python --version
     - pip install --upgrade pip
     - pip install --progress-bar=off build
@@ -29,6 +31,22 @@ build_package:
   artifacts:
     paths:
       - dist/*
+
+import-package:
+  stage: test
+  image: python:3.9-slim
+  needs: [build-package]
+  cache:
+    paths:
+      - .cache/pip
+  variables:
+    PIP_CACHE_DIR: "${CI_PROJECT_DIR}/.cache/pip"
+  before_script:
+    - python --version
+    - pip install --upgrade pip
+  script:
+    - pip install --progress-bar=off ./dist/access_atmosphere-*-linux_x86_64.whl
+    - python -c 'import access_atmosphere; print(access_atmosphere.rtm)'
 
 format:
   stage: test
