@@ -28,6 +28,8 @@ RUN python -m build
 
 FROM docker.io/library/python:3.9-slim
 
+RUN apt-get update && \
+    apt-get install -y libgfortran5 libgomp1
 RUN pip install --upgrade pip
 
 WORKDIR /root
