@@ -288,7 +288,7 @@ def write_rtm_data(rtm_data: RtmDailyData, rtm_output: Path) -> None:
     timestamp = datetime.now(timezone.utc).isoformat(" ", "seconds")
     nc_version = getlibversion().partition(" ")[0]
 
-    time_units = "hours since 1990-01-01 00:00:00Z"
+    time_units = "hours since 1900-01-01 00:00:00Z"
     data_times = num2date(rtm_data.time, time_units)
     time_start = min(data_times).isoformat(" ", "seconds")
     time_end = max(data_times).isoformat(" ", "seconds")
