@@ -13,6 +13,7 @@ import argparse
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from time import perf_counter_ns
 from typing import NamedTuple, cast
 
 import numpy as np
@@ -404,6 +405,9 @@ def convert(
 
     if verbose:
         print("Running RTM over all data")
+
+    tick = perf_counter_ns()
+
     # The ERA5 data is organized by lat/lon, but we need to vectorize that down
     # for the RTM and then reshape the output when finished
     shape_4d = era5_data.temperature.shape
@@ -422,6 +426,11 @@ def convert(
         REF_EIA,
         REF_FREQ,
     )
+
+    tock = perf_counter_ns()
+    duration_seconds = (tock - tick) * 1e-9
+    if verbose:
+        print(f"Finished RTM in {duration_seconds:0.2f} s")
 
     # Now the output values need to be un-vectorized
     num_freq = len(REF_FREQ)
