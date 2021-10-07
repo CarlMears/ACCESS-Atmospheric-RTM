@@ -1,7 +1,7 @@
 !    -*- f90 -*-
 ! Note: the context of this file is case sensitive.
 
-python module rtm ! in 
+python module rtm_f90 ! in
     interface  ! in :rtm
         module access_rtm ! in :rtm:lib/access_rtm.f90
             integer, parameter,public :: nmax=26
@@ -25,7 +25,7 @@ python module rtm ! in
             end subroutine compute_rtm
         end module access_rtm
     end interface 
-end python module rtm
+end python module rtm_f90
 
 ! This file was auto-generated with f2py (version:1.21.2).
 ! See http://cens.ioc.ee/projects/f2py2e/

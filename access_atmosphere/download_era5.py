@@ -80,43 +80,6 @@ SURFACE_VARIABLES = [
 HOURS = ["00:00", "12:00"]
 
 
-def main() -> None:
-    """Parse arguments and download the data."""
-    parser = argparse.ArgumentParser(description="Download relevant ERA5 data")
-    parser.add_argument("start_date", type=date.fromisoformat, help="starting day")
-    parser.add_argument("end_date", type=date.fromisoformat, help="ending day")
-    parser.add_argument(
-        "--out-dir",
-        type=Path,
-        default=Path.cwd(),
-        metavar="DIR",
-        help="directory to write files",
-    )
-    args = parser.parse_args()
-
-    if args.end_date < args.start_date:
-        parser.error("Ending date must be after starting date")
-
-    try:
-        cds_uid = os.environ["CDS_UID"]
-        cds_api_key = os.environ["CDS_API_KEY"]
-    except KeyError:
-        parser.exit(
-            1,
-            "For CDS authentication, both 'CDS_UID' and "
-            "'CDS_API_KEY' environment variables must be set",
-        )
-
-    cds_key = ":".join([cds_uid, cds_api_key])
-    c = cdsapi.Client(url=CDS_URL, key=cds_key, verify=True)
-
-    cur_day: date = args.start_date
-    end_day: date = args.end_date
-    while cur_day <= end_day:
-        download_day(c, cur_day, args.out_dir)
-        cur_day += timedelta(days=1)
-
-
 def download_day(client: cdsapi.Client, cur_day: date, out_dir: Path) -> None:
     """Download the ERA5 datasets of interest for a single day."""
     out_surface = out_dir / Path(f"era5_surface_{cur_day.isoformat()}.nc")
@@ -161,4 +124,36 @@ def download_day(client: cdsapi.Client, cur_day: date, out_dir: Path) -> None:
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Download relevant ERA5 data")
+    parser.add_argument("start_date", type=date.fromisoformat, help="starting day")
+    parser.add_argument("end_date", type=date.fromisoformat, help="ending day")
+    parser.add_argument(
+        "--out-dir",
+        type=Path,
+        default=Path.cwd(),
+        metavar="DIR",
+        help="directory to write files",
+    )
+    args = parser.parse_args()
+
+    if args.end_date < args.start_date:
+        parser.error("Ending date must be after starting date")
+
+    try:
+        cds_uid = os.environ["CDS_UID"]
+        cds_api_key = os.environ["CDS_API_KEY"]
+    except KeyError:
+        parser.exit(
+            1,
+            "For CDS authentication, both 'CDS_UID' and "
+            "'CDS_API_KEY' environment variables must be set",
+        )
+
+    cds_key = ":".join([cds_uid, cds_api_key])
+    c = cdsapi.Client(url=CDS_URL, key=cds_key, verify=True)
+
+    cur_day: date = args.start_date
+    end_day: date = args.end_date
+    while cur_day <= end_day:
+        download_day(c, cur_day, args.out_dir)
+        cur_day += timedelta(days=1)

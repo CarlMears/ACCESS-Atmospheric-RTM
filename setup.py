@@ -4,7 +4,7 @@ from numpy.distutils.core import Extension, setup
 
 extensions = [
     Extension(
-        name="access_atmosphere.rtm",
+        name="access_atmosphere.rtm_f90",
         # Note the order here is important
         sources=[
             "lib/access_rtm.pyf",
@@ -29,6 +29,7 @@ setup(
     install_requires=[
         "cdsapi",
         "numpy",
+        "netCDF4",
     ],
     author="Richard Lindsley",
     author_email="lindsley@remss.com",
