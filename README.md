@@ -4,67 +4,80 @@ For the ACCESS project, download ERA5 atmosphere geophysical parameters and appl
 
 ## Overview
 
-Currently, this contains two main projects:
+This is a Python package, `access-atmosphere`, that currently performs two main
+tasks:
 
-- `download_era5.py`: Python script to download ERA5 data
-- `rtm/`: Fortran executables to apply RTM to ERA5 data
+- Download relevant ERA5 data
+- Compute atmospheric RTM based on the ERA5 data
 
-## Downloading ERA5 data
+The RTM is implemented in Fortran and compiled using `f2py` into a Python extension.
+
+## Building
+
+Assuming a Fortran compiler is available, the package can be built using
+[build](https://github.com/pypa/build). Starting from a scratch in a new
+[virtual environment](https://docs.python.org/3/library/venv.html):
+
+```bash
+python3 -m venv --upgrade-deps .venv
+.venv/bin/pip install build
+.venv/bin/python -m build
+```
+
+This creates a source distribution as `dist/access-atmosphere-$VERSION.tar.gz`
+and a wheel as `dist/access-atmosphere-$VERSION-*.whl`. (The extra information
+at the end of the filename contains the Python version and platform
+information.) Either file (sdist or wheel) can be used to install the package,
+but note that a big benefit for the wheel is that it's ready to go and no
+Fortran compiler is needed.
+
+To install the wheel in a new venv and download the dependencies from PyPI:
+
+```bash
+python3 -m venv --upgrade-deps .venv
+.venv/bin/pip install access-atmosphere-$VERSION-*.whl
+```
+
+Alternately, Gitlab CI jobs are set up to build
+[manylinux](https://github.com/pypa/manylinux) wheels for multiple versions of
+Python. The wheels can be downloaded as CI job artifacts (perhaps future work is
+to put them in a local PyPI registry).
+
+## Running
+
+### Downloading ERA5 data
 
 To download data from the [Climate Data
 Store](https://cds.climate.copernicus.eu/cdsapp), an account needs to be
 registered. Note the UID and API key for later.
-
-Before running the Python download script, its dependencies can be installed into a local [virtual environment](https://docs.python.org/3/library/venv.html):
-
-```bash
-python3 -m venv --upgrade-deps .venv
-source .venv/bin/activate
-pip install cdsapi
-```
 
 To download the ERA5 datasets of interest for some time range, the script can be
 run with two environment variables set for CDS authentication:
 
 ```bash
 # (assuming the virtualenv is activated)
-env CDS_UID=xxx CDS_API_KEY=xxx python3 ./download_era5.py 2020-01-01 2020-01-31 --out-dir era5
+env CDS_UID=xxx CDS_API_KEY=xxx python3 -m access_atmosphere.download_era5 2020-01-01 2020-01-31 --out-dir era5
 ```
 
-By default the netCDF files are written to the current working directory.
+For each day, two files are created: one for the surface data and one for the
+atmospheric profiles. The netCDF files are written to the directory specified by
+`--out-dir`, or the current working directory if it's not specified.
 
-## Applying the RTM
+### Applying the RTM
 
-A Fortran executable, `access_rtm`, is in the `rtm/` directory. Besides a
-Fortran compiler, it also depends on the
-[netCDF-Fortran](https://github.com/Unidata/netcdf-fortran) library. On a
-[RHEL](https://en.wikipedia.org/wiki/Red_Hat_Enterprise_Linux)-like system this can all be set up using:
+A Python interface to the RTM is provided in the `access_atmosphere.rtm` module.
 
-```bash
-sudo dnf install -y gcc-gfortran netcdf-fortran-devel meson ninja-build
-```
+As an example usage, the `access_atmosphere.process` module reads in a pair of
+ERA5 daily files and runs the RTM for every point (latitude/longitude/time) and
+writes the results in a new netCDF file. It uses reference values for the
+incidence angles and microwave frequencies. The outputs are on the same
+0.25-degree grid that ERA5 uses.
 
-And then it can be built using [meson](https://mesonbuild.com/):
-
-```bash
-meson setup build rtm
-meson compile -C build
-```
-
-An example run for 2020-01-01 using the `era5` data directory from above:
+As an example using the 2020-01-01 data downloaded above:
 
 ```bash
-./build/access_rtm 2020 1 access_era_2020-01-01.nc --in-dir era5
-```
-
-It reads the ERA5 data for a single day and runs the RTM for some hard-coded
-incidence angle and microwave frequency configuration. The outputs are on a
-0.25-degree grid.
-
-For debugging purposes, there is also another executable, `access_rtm_ncep`,
-which reads NCEP GDAS data (as post-processed by RSS). This, however, is on a
-1-degree grid.
-
-```bash
-./build/access_rtm_ncep 2020 1 access_ncep_2020-01-01.nc
+python -m access_atmosphere.process \
+    era5_surface_2020-01-01.nc \
+    era5_levels_2020-01-01.nc \
+    access_era5_2020-01-01.nc
 ```
