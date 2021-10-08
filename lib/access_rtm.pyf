@@ -9,16 +9,16 @@ python module rtm_f90 ! in
                 integer, intent(in),check(len(surface_temperature)==num_points),depend(surface_temperature) :: num_points=len(surface_temperature)
                 integer, intent(in),check(len(freq)==num_freq),depend(freq) :: num_freq=len(freq)
                 real(kind=4) dimension(num_levels),intent(in) :: levels
-                real(kind=4) dimension(num_levels,num_points),intent(in) :: temperature
+                real(kind=4) dimension(num_levels,num_points),intent(in),depend(num_levels,num_points) :: temperature
                 real(kind=4) dimension(num_levels,num_points),intent(in),depend(num_levels,num_points) :: height
                 real(kind=4) dimension(num_levels,num_points),intent(in),depend(num_levels,num_points) :: specific_humidity
                 real(kind=4) dimension(num_levels,num_points),intent(in),depend(num_levels,num_points) :: liquid_content
-                real(kind=4) dimension(num_points),intent(in),depend(num_points) :: surface_temperature
+                real(kind=4) dimension(num_points),intent(in) :: surface_temperature
                 real(kind=4) dimension(num_points),intent(in),depend(num_points) :: surface_height
                 real(kind=4) dimension(num_points),intent(in),depend(num_points) :: surface_dewpoint
                 real(kind=4) dimension(num_points),intent(in),depend(num_points) :: surface_pressure
-                real(kind=4) dimension(num_freq),intent(in) :: eia
-                real(kind=4) dimension(num_freq),intent(in),depend(num_freq) :: freq
+                real(kind=4) dimension(num_freq),intent(in),depend(num_freq) :: eia
+                real(kind=4) dimension(num_freq),intent(in) :: freq
                 real(kind=4) dimension(num_freq,num_points),intent(out),depend(num_freq,num_points) :: tran
                 real(kind=4) dimension(num_freq,num_points),intent(out),depend(num_freq,num_points) :: tb_up
                 real(kind=4) dimension(num_freq,num_points),intent(out),depend(num_freq,num_points) :: tb_down
