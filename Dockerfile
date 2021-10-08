@@ -11,40 +11,41 @@
 #
 # To run it:
 #
-# TODO: finish the running instructions. Note that the only bind-mount needed is
-# /mnt/ops1p/n for NCEP data. Plus either a bind-mount for the output data or a
-# volume.
+# docker run access-atmospheric-rtm:latest -m access_atmosphere.download_era5 ...
+#
+# Or:
+#
+# docker run access-atmospheric-rtm:latest -m access_atmosphere.process...
+#
+# Probably a bind-mount volume is needed to store the outputs. For example:
+#
+# docker run -v $PWD:/data access-atmospheric-rtm:latest -m access_atmosphere.process /data/era5_surface.nc /data/era5_levels.nc /data/rtm_out.nc
 
-FROM quay.io/rockylinux/rockylinux:8 AS build
+FROM docker.io/library/python:3.9 AS build
 
-RUN dnf install -y dnf-plugins-core epel-release gcc-gfortran gcc-c++ && \
-    dnf config-manager --set-enabled powertools && \
-    dnf install -y meson ninja-build netcdf-fortran-devel
-
-WORKDIR /root
-COPY rtm rtm
-
-RUN meson setup --buildtype release build/ rtm/
-RUN meson compile -C build/
-
-FROM quay.io/rockylinux/rockylinux:8
-
-RUN dnf install -y dnf-plugins-core epel-release && \
-    dnf config-manager --set-enabled powertools && \
-    dnf install -y --nodocs libgfortran libgomp netcdf-fortran python39 python39-pip python39-wheel && \
-    dnf clean all && \
-    rm -rf /var/cache/dnf/*
-
-RUN pip3 install cdsapi
+RUN apt-get update && \
+    apt-get install -y gfortran
+RUN python3 -m venv --upgrade-deps /root/venv
+RUN /root/venv/bin/pip3 install build
 
 WORKDIR /root
+COPY . .
 
+RUN /root/venv/bin/python3 -m build
+
+FROM docker.io/library/python:3.9-slim
+
+RUN apt-get update && \
+    apt-get install -y libgfortran5 libgomp1
+RUN python3 -m venv --upgrade-deps /root/venv
+
+WORKDIR /root
 COPY --from=build \
-    /root/build/access_rtm \
-    /root/build/access_rtm_ncep \
-    /usr/local/bin/
+    /root/dist/*.whl \
+    /root/
 
-COPY download_era5.py .
+RUN /root/venv/bin/pip3 install ./*.whl
+ENTRYPOINT [ "/root/venv/bin/python3" ]
 
 ARG version
 ARG revision
@@ -56,7 +57,7 @@ LABEL Maintainer="Richard Lindsley <lindsley@remss.com>" \
     "org.opencontainers.image.created"="$build_date" \
     "org.opencontainers.image.authors"="Richard Lindsley <lindsley@remss.com>" \
     "org.opencontainers.image.vendor"="Remote Sensing Systems" \
-    "org.opencontainers.image.url"="http://gitlab.remss.com/lindsley/access-atmospheric-rtm" \
-    "org.opencontainers.image.source"="http://gitlab.remss.com/lindsley/access-atmospheric-rtm" \
+    "org.opencontainers.image.url"="http://gitlab.remss.com/access/atmospheric-rtm" \
+    "org.opencontainers.image.source"="http://gitlab.remss.com/access/atmospheric-rtm" \
     "org.opencontainers.image.version"="$version" \
     "org.opencontainers.image.revision"="$revision"

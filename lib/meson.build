@@ -51,43 +51,15 @@ else
     warning('Not adding any compiler options')
 endif
 
-# -----------------------
-# The netCDF library is used for reading and writing files.
-if meson.version().version_compare('>=0.50')
-    # netcdf = dependency('netcdf', language : 'c')
-    netcdff = dependency('netcdf', language : 'fortran')
-else
-    # netcdf = dependency('netcdf')
-    netcdff = dependency('netcdf-fortran')
-endif
-
 openmp = dependency('openmp', required : false)
 
 # -----------------------
-executable('access_rtm',
+static_library('access_rtm',
     sources : [
         'access_rtm.f90',
         'atms_abs_routines.f90',
-        'column.f90',
-        'daily_scene_era5.f90',
         'dielectric_meissner.f90',
-        'read_era5.f90',
-        'time_conversions.f90',
         'trig_degrees.f90',
         'wvap_convert.f90',
     ],
-    dependencies : [netcdff, openmp])
-
-executable('access_rtm_ncep',
-    sources : [
-        'access_rtm_ncep.f90',
-        'atms_abs_routines.f90',
-        'column.f90',
-        'daily_scene_ncep.f90',
-        'dielectric_meissner.f90',
-        'read_ncep.f90',
-        'time_conversions.f90',
-        'trig_degrees.f90',
-        'wvap_convert.f90',
-    ],
-    dependencies : [netcdff, openmp])
+    dependencies : [openmp])
