@@ -4,15 +4,15 @@
 python module rtm_f90 ! in
     interface  ! in :rtm
         module access_rtm ! in :rtm:lib/access_rtm.f90
-            integer, parameter,public :: nmax=26
-            subroutine compute_rtm(num_points,num_freq,levels,temperature,height,specific_humidity,liquid_content,surface_temperature,surface_height,surface_dewpoint,surface_pressure,eia,freq,tran,tb_up,tb_down) ! in :rtm:lib/access_rtm.f90:access_rtm
-                integer, intent(in),check(shape(temperature,1)==num_points),depend(temperature) :: num_points=shape(temperature,1)
-                integer, intent(in),check(len(eia)>=num_freq),depend(eia) :: num_freq=len(eia)
-                real(kind=4) dimension(26),intent(in) :: levels
-                real(kind=4) dimension(26,num_points),intent(in) :: temperature
-                real(kind=4) dimension(26,num_points),intent(in),depend(num_points) :: height
-                real(kind=4) dimension(26,num_points),intent(in),depend(num_points) :: specific_humidity
-                real(kind=4) dimension(26,num_points),intent(in),depend(num_points) :: liquid_content
+            subroutine compute_rtm(num_levels,num_points,num_freq,levels,temperature,height,specific_humidity,liquid_content,surface_temperature,surface_height,surface_dewpoint,surface_pressure,eia,freq,tran,tb_up,tb_down) ! in :rtm:lib/access_rtm.f90:access_rtm
+                integer, intent(in),check(len(levels)==num_levels),depend(levels) :: num_levels=len(levels)
+                integer, intent(in),check(len(surface_temperature)==num_points),depend(surface_temperature) :: num_points=len(surface_temperature)
+                integer, intent(in),check(len(freq)==num_freq),depend(freq) :: num_freq=len(freq)
+                real(kind=4) dimension(num_levels),intent(in) :: levels
+                real(kind=4) dimension(num_levels,num_points),intent(in) :: temperature
+                real(kind=4) dimension(num_levels,num_points),intent(in),depend(num_levels,num_points) :: height
+                real(kind=4) dimension(num_levels,num_points),intent(in),depend(num_levels,num_points) :: specific_humidity
+                real(kind=4) dimension(num_levels,num_points),intent(in),depend(num_levels,num_points) :: liquid_content
                 real(kind=4) dimension(num_points),intent(in),depend(num_points) :: surface_temperature
                 real(kind=4) dimension(num_points),intent(in),depend(num_points) :: surface_height
                 real(kind=4) dimension(num_points),intent(in),depend(num_points) :: surface_dewpoint
