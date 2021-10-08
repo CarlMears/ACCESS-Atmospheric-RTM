@@ -62,13 +62,13 @@ To download the ERA5 datasets of interest for some time range, the script can be
 run with two environment variables set for CDS authentication:
 
 ```bash
-# (assuming the virtualenv is activated)
 env CDS_UID=xxx CDS_API_KEY=xxx python3 -m access_atmosphere.download_era5 2020-01-01 2020-01-31 --out-dir era5
 ```
 
 For each day, two files are created: one for the surface data and one for the
 atmospheric profiles. The netCDF files are written to the directory specified by
-`--out-dir`, or the current working directory if it's not specified.
+`--out-dir`, or the current working directory if it's not specified. Any
+existing files are not re-downloaded from CDS.
 
 ### Applying the RTM
 
@@ -87,4 +87,14 @@ python -m access_atmosphere.process \
     era5_surface_2020-01-01.nc \
     era5_levels_2020-01-01.nc \
     access_era5_2020-01-01.nc
+```
+
+The Fortran code is compiled with [OpenMP](https://www.openmp.org/) in order to
+process each profile in parallel using a pool of worker threads. By default,
+this will be as many threads as there are logical CPUs detected on the machine.
+To modify this at runtime, use the `OMP_NUM_THREADS` environment variable. For
+instance, to set exactly 4 threads:
+
+```bash
+env OMP_NUM_THREADS=4 python3 -m access_atmosphere.process ...
 ```
