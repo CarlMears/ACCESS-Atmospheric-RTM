@@ -166,10 +166,10 @@ contains
     integer :: ipr
 
     do ipr = ibegin,NMAX
-      ! Water/oxygen absorption coefficients in neper/km
+      ! Water/oxygen absorption coefficients in Np/km
       call fdabscoeff(freq,p(ipr),t(ipr),pv(ipr), abh2o,abo2)
 
-      ! Cloud absorption coefficients in neper/km
+      ! Cloud absorption coefficients in Np/km
       if (rhol(ipr) > 1.0e-7) then
           call fdcldabs(freq,t(ipr),rhol(ipr), abcld)
        else

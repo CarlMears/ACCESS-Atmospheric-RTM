@@ -22,11 +22,11 @@ contains
 
   !     This is from Atmospheric 60-GHz Oxygen Spectrum:.. Liebe, Rosenkranz, Hufford, 1992
   !     coded: June 2009 1992 by f.wentz
-  !           inputs: t, temperature (k)
+  !           inputs: t, temperature (K)
   !                   p, total pressure (mb)
   !                   pv, water vapor pressure (mb)
-  !                   freq, frequency (ghz)
-  !           output: gamoxy, oxygen absorption coefficient (db/km)
+  !                   freq, frequency (GHz)
+  !           output: gamoxy, oxygen absorption coefficient (dB/km)
 
 
   !     It is the same as fdabsoxy_1989 except for the a5 and a6 coefs for finding delta have different values.
@@ -162,8 +162,8 @@ contains
   !      name    units    i/o  descripton            valid range
   !      t       kelvin    i   temperature
   !      p       millibar  i   pressure              .1 to 1000
-  !      f       ghz       i   frequency             0 to 800
-  !      gamh2o  db/km     o   absorption coefficient
+  !      f       GHz       i   frequency             0 to 800
+  !      gamh2o  dB/km     o   absorption coefficient
   !
   !   references-
   !    p.w. rosenkranz, radio science v.33, pp.919-928 (1998).
@@ -291,16 +291,16 @@ contains
   !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
   !   input:
   !     nlev           number of atmosphere levels
-  !     tht            earth incidence angle [in deg]
-  !     tabs(0:nlev)   atmosphric absorptrion coefficients [nepers/m]
-  !     t(0:nlev)      temperature profile[in k]
-  !   z(0:nlev)      elevation (m)
+  !     tht            earth incidence angle [degree]
+  !     tabs(0:nlev)   atmospheric absorption coefficients [Np/m]
+  !     t(0:nlev)      temperature profile [K]
+  !   z(0:nlev)      elevation [m]
 
 
   !     output:
   !     tran          total atmospheric transmission
-  !     tbdw          downwelling brightness temperature t_bd [in k]
-  !     tbup          upwelling   brightness temperature t_bu [in k]
+  !     tbdw          downwelling brightness temperature t_bd [K]
+  !     tbup          upwelling   brightness temperature t_bu [K]
   !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
   pure subroutine atm_tran(nlev,tht,t,z,tabs,  tran,tbdw,tbup)
@@ -346,14 +346,14 @@ contains
 
   !   input:
   !     oxygen absorption from rosenkranz
-  !     freq  frequency [in ghz]
-  !     p      pressure [in h pa]
-  !     t      temperature [in k]
-  !     pv     water vapor pressure  [in hpa]
+  !     freq  frequency [GHz]
+  !     p      pressure [hPa]
+  !     t      temperature [k]
+  !     pv     water vapor pressure  [hPa]
   !
   !     output:
-  !     av          water vapor absorption coefficients [neper/km]
-  !     ao          oxygen absortption coefficient        [neper/km]
+  !     av          water vapor absorption coefficient [Np/km]
+  !     ao          oxygen absorption coefficient        [Np/km]
   subroutine fdabscoeff(freq,p,t,pv, av,ao)
     real(real32), intent(in) :: freq,p,t,pv
     real(real32), intent(out) :: av,ao
@@ -371,11 +371,11 @@ contains
 
   !     liquid cloud water absorption
   !     rayleigh
-  !     freq:      frequency [ghz]
-  !     t:         temperature [k]
+  !     freq:      frequency [GHz]
+  !     t:         temperature [K]
   !     rhol:      liquid cloud water density [g/m**3]
   !     output:
-  !     al:        cloud water absorption coefficient [neper/km]
+  !     al:        cloud water absorption coefficient [Np/km]
   pure subroutine fdcldabs(freq,t,rhol,   al)
     real(real32), intent(in) :: freq, t, rhol
     real(real32), intent(out) :: al
@@ -386,8 +386,8 @@ contains
     rhol0 = 1.0e-6*rhol ![g/cm**3]
     call meissner(freq,t,0.0,   permit)
     wavlen = c/freq
-    al = (6.0*pi*rhol0/wavlen)*aimag((1.0-permit)/(2.0+permit))  ! nepers/cm
-    al = 1.0e5*al ! nepers/km
+    al = (6.0*pi*rhol0/wavlen)*aimag((1.0-permit)/(2.0+permit))  ! Np/cm
+    al = 1.0e5*al ! Np/km
   end subroutine fdcldabs
 
 end module atms_abs_routines
