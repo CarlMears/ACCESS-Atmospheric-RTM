@@ -21,17 +21,18 @@ import cdsapi
 # CDS API
 CDS_URL = "https://cds.climate.copernicus.eu/api/v2"
 
-# These pressure levels (in hPa) are the same as the NCEP GDAS data but they are
-# a subset of the available ERA5 levels. (In other words, more could be added if
-# desired.)
+# The available pressure levels (in hPa) from ERA5
 LEVELS = [
     "1000",
     "975",
     "950",
     "925",
     "900",
+    "875",
     "850",
+    "825",
     "800",
+    "775",
     "750",
     "700",
     "650",
@@ -43,14 +44,22 @@ LEVELS = [
     "350",
     "300",
     "250",
+    "225",
     "200",
+    "175",
     "150",
+    "125",
     "100",
     "70",
     "50",
     "30",
     "20",
     "10",
+    "7",
+    "5",
+    "3",
+    "2",
+    "1",
 ]
 
 # The ERA5 variables for the pressure-level analysis product
