@@ -1,3 +1,6 @@
+include:
+  - template: Security/SAST.gitlab-ci.yml
+
 build-library:
   stage: build
   image: quay.io/rockylinux/rockylinux:8
@@ -124,6 +127,26 @@ mypy:
     reports:
       junit: mypy.junit.xml
       cobertura: cobertura.xml
+
+publish-pypi:
+  stage: deploy
+  image: python:3.9-slim
+  needs: ["build-linux", "build-manylinux2014"]
+  # Once a package version is uploaded to a PyPI registry, it cannot be updated.
+  # So to ensure no conflicts, only tagged releases are published.
+  only:
+    - tags
+  before_script:
+    - python --version
+    - pip install --upgrade pip
+    - pip install twine
+  script:
+    - >
+      TWINE_PASSWORD=${CI_JOB_TOKEN}
+      TWINE_USERNAME=gitlab-ci-token
+      python -m twine upload
+      --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi
+      dist/*.tar.gz dist/*manylinux*.whl
 
 # package-image:
 #   stage: deploy
