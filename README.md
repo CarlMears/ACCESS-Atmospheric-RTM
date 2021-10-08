@@ -43,6 +43,13 @@ Alternately, Gitlab CI jobs are set up to build
 Python. The wheels can be downloaded as CI job artifacts (perhaps future work is
 to put them in a local PyPI registry).
 
+As another option, a [`Dockerfile`](Dockerfile) is provided. Build it with
+`docker` or `podman`:
+
+```bash
+podman build -t access_atmosphere -f Dockerfile
+```
+
 ## Running
 
 ### Downloading ERA5 data

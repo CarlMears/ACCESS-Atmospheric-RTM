@@ -11,33 +11,41 @@
 #
 # To run it:
 #
-# TODO: finish the running instructions. Note that the only bind-mount needed is
-# /mnt/ops1p/n for NCEP data. Plus either a bind-mount for the output data or a
-# volume.
+# docker run access-atmospheric-rtm:latest -m access_atmosphere.download_era5 ...
+#
+# Or:
+#
+# docker run access-atmospheric-rtm:latest -m access_atmosphere.process...
+#
+# Probably a bind-mount volume is needed to store the outputs. For example:
+#
+# docker run -v $PWD:/data access-atmospheric-rtm:latest -m access_atmosphere.process /data/era5_surface.nc /data/era5_levels.nc /data/rtm_out.nc
 
 FROM docker.io/library/python:3.9 AS build
 
 RUN apt-get update && \
     apt-get install -y gfortran
-RUN pip install --upgrade pip && pip install build
+RUN python3 -m venv --upgrade-deps /root/venv
+RUN /root/venv/bin/pip3 install build
 
 WORKDIR /root
 COPY . .
 
-RUN python -m build
+RUN /root/venv/bin/python3 -m build
 
 FROM docker.io/library/python:3.9-slim
 
 RUN apt-get update && \
     apt-get install -y libgfortran5 libgomp1
-RUN pip install --upgrade pip
+RUN python3 -m venv --upgrade-deps /root/venv
 
 WORKDIR /root
 COPY --from=build \
     /root/dist/*.whl \
     /root/
 
-RUN pip install ./*.whl
+RUN /root/venv/bin/pip3 install ./*.whl
+ENTRYPOINT [ "/root/venv/bin/python3" ]
 
 ARG version
 ARG revision
