@@ -7,7 +7,6 @@ module access_rtm
   use, intrinsic :: iso_c_binding, only: c_int, c_int32_t, c_ptr, c_f_pointer
   use, intrinsic :: ieee_arithmetic, only: ieee_value, ieee_quiet_nan
   use atms_abs_routines, only: atm_tran, fdcldabs, fdabscoeff
-  use time_conversions, only: yo_to_ymd
   use wvap_convert, only: goff_gratch_vap
   implicit none
   private
