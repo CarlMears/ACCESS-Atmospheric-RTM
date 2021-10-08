@@ -26,7 +26,7 @@ class Era5DailyData(NamedTuple):
     # Hours since 1900-01-01, dimensioned as (num_time, ).
     time: NDArray[np.int32]
 
-    # Profile air temperature in Kelvin, dimensioned as (time, lats, lons, levels)
+    # Profile air temperature in kelvin, dimensioned as (time, lats, lons, levels)
     temperature: NDArray[np.float32]
 
     # Profile relative humidity in percentage (0 to 100), dimensioned as (time,
@@ -62,7 +62,7 @@ class Era5DailyData(NamedTuple):
 def buck_vap(temperature: NDArray[np.float32]) -> NDArray[np.float32]:
     """Buck equation.
 
-    Use the Buck equation to convert temperature in Kelvin into water vapor
+    Use the Buck equation to convert temperature in kelvin into water vapor
     saturation pressure in hPa. The equation is from [1], which cites Buck 1996.
 
     To convert to water vapor partial pressure, multiply the result by the
