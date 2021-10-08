@@ -7,7 +7,7 @@ module access_rtm
   use, intrinsic :: iso_c_binding, only: c_int, c_int32_t, c_ptr, c_f_pointer
   use, intrinsic :: ieee_arithmetic, only: ieee_value, ieee_quiet_nan
   use atms_abs_routines, only: atm_tran, fdcldabs, fdabscoeff
-  use wvap_convert, only: goff_gratch_vap
+  use wvap_convert, only: buck_vap
   implicit none
   private
   public :: NMAX, compute_rtm
@@ -31,15 +31,15 @@ contains
   !
   ! Returns 0 if all okay
   subroutine compute_rtm(num_points, num_freq, &
-    levels, temperature, height, relative_humidity, liquid_content, &
-    surface_temperature, surface_height, surface_relative_humidity, surface_pressure, &
+    levels, temperature, height, specific_humidity, liquid_content, &
+    surface_temperature, surface_height, surface_dewpoint, surface_pressure, &
     eia, freq, tran, tb_up, tb_down)
     integer, intent(in) :: num_points, num_freq
     real(real32), dimension(NMAX), intent(in) :: levels
     real(real32), dimension(num_points), intent(in) :: surface_temperature, surface_height, &
-      surface_relative_humidity, surface_pressure
+      surface_dewpoint, surface_pressure
     real(real32), dimension(NMAX, num_points), intent(in) :: temperature, height, &
-      relative_humidity, liquid_content
+      specific_humidity, liquid_content
     real(real32), dimension(num_freq), intent(in) :: eia, freq
     real(real32), dimension(num_freq, num_points), intent(out) :: tran, tb_up, tb_down
 
@@ -50,7 +50,7 @@ contains
     do i = 1, num_points
       call prepare_parameters(levels(:), surface_temperature(i), temperature(:, i), &
         surface_height(i), height(:, i), &
-        surface_relative_humidity(i), relative_humidity(:, i), &
+        surface_dewpoint(i), specific_humidity(:, i), &
         liquid_content(:, i), surface_pressure(i), &
         ibegin, p, t, pv, rhol, z)
       do ifreq = 1, num_freq
@@ -63,16 +63,16 @@ contains
   ! ----------------------------------------------------------------------
   ! From the ERA5 data, prepare these profile/surface parameters for the RTM
   pure subroutine prepare_parameters(levels, surface_temperature, temperature, &
-    surface_height, height, surface_relative_humidity, relative_humidity, &
+    surface_height, height, surface_dewpoint, specific_humidity, &
     liquid_content, surface_pressure, &
     ibegin, p, t, pv, rhol, z)
-    real(real32), intent(in) :: surface_temperature, surface_height, surface_relative_humidity, surface_pressure
-    real(real32), dimension(NMAX), intent(in) :: levels, temperature, height, relative_humidity, liquid_content
+    real(real32), intent(in) :: surface_temperature, surface_height, surface_dewpoint, surface_pressure
+    real(real32), dimension(NMAX), intent(in) :: levels, temperature, height, specific_humidity, liquid_content
     integer, intent(out) :: ibegin
     real(real32), dimension(0:NMAX), intent(out) :: p, t, pv, rhol, z
 
     integer :: ipr
-    real(real32), dimension(0:NMAX) :: hgt, rh, rhov, q_l
+    real(real32), dimension(0:NMAX) :: hgt, q_l
     real(real32), dimension(0:NMAX) :: R_moist, q_h2o, w
 
     ! Ideal gas constant (J/mol/K)
@@ -101,8 +101,19 @@ contains
     hgt(0) = surface_height
     hgt(1:NMAX) = height(1:NMAX)
 
-    rh(0) = surface_relative_humidity
-    rh(1:NMAX) = relative_humidity(1:NMAX)
+    ! Convert specific humidity q to water vapor pressure P_v. The mass mixing
+    ! ratio w is:
+    !
+    ! w = q / (1 - q)
+    !
+    ! The vapor pressure is:
+    !
+    ! P_v = (w P) / (R_dry/R_vapor + w)
+    w(1:NMAX) = specific_humidity(1:NMAX) / (1. - specific_humidity(1:NMAX))
+    pv(1:NMAX) = (w(1:NMAX) * p(1:NMAX)) / (R_dry / R_vapor + w(1:NMAX))
+
+    ! For the surface, convert dewpoint to vapor pressure using the Buck equation
+    pv(0) = buck_vap(surface_dewpoint)
 
     q_l(0) = 0.
     q_l(1:NMAX) = liquid_content(1:NMAX)
@@ -120,20 +131,20 @@ contains
     p(ibegin) = surface_pressure
     t(ibegin) = t(0)
     hgt(ibegin) = hgt(0)
-    rh(ibegin) = rh(0)
+    pv(ibegin) = pv(0)
     q_l(ibegin) = q_l(ibegin+1)
 
     ! Convert geopotential height to geometric height
     z = hgt * R_e / (R_e - hgt)
     if (z(ibegin) >= z(ibegin+1)) z(ibegin) = z(ibegin+1) - 0.1
 
-    ! Find the vapor pressure and water vapor density
-    call goff_gratch_vap(t, rh, p, pv, rhov)
-
-    ! Convert relative humidity to specific humidity
+    ! Convert water mass mixing ratio to specific humidity
     ! (https://earthscience.stackexchange.com/a/5077)
     !
-    ! w is the mass mixing ratio of the water vapor to dry air
+    ! This is a bit redundant since q_h2o (specific humidity) is an input.
+    ! However, the surface specific humidity is not given (it was converted
+    ! directly from dewpoint to vapor pressure) and also the "ibegin" above
+    ! modified the profile.
     where (p > 0)
       w = (pv * R_dry) / (R_vapor * (p - pv))
       q_h2o = w / (w + 1)
