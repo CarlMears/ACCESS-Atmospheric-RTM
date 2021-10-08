@@ -29,11 +29,11 @@ def compute(
     pressure: NDArray[np.float32],
     temperature: NDArray[np.float32],
     height: NDArray[np.float32],
-    relative_humidity: NDArray[np.float32],
+    specific_humidity: NDArray[np.float32],
     liquid_content: NDArray[np.float32],
     surface_temperature: NDArray[np.float32],
     surface_height: NDArray[np.float32],
-    surface_relative_humidity: NDArray[np.float32],
+    surface_dewpoint: NDArray[np.float32],
     surface_pressure: NDArray[np.float32],
     incidence_angle: NDArray[np.float32],
     frequency: NDArray[np.float32],
@@ -52,7 +52,7 @@ def compute(
 
     height: geometric height above the geoid in m
 
-    relative_humidity: relative humidity in %
+    specific_humidity: specific humidity in kg/kg
 
     liquid_content: liquid water content (from clouds) in kg/kg
 
@@ -62,7 +62,7 @@ def compute(
 
     surface_height: geopotential height at the surface in m
 
-    surface_relative_humidity: 2 meter relative humidity in %
+    surface_dewpoint: 2 meter dewpoint in K
 
     surface_pressure: surface pressure in hPa
 
@@ -86,14 +86,14 @@ def compute(
     if (
         not all(
             a.shape == (num_points, num_levels)
-            for a in (temperature, height, relative_humidity, liquid_content)
+            for a in (temperature, height, specific_humidity, liquid_content)
         )
         or not all(
             a.shape == (num_points,)
             for a in (
                 surface_temperature,
                 surface_height,
-                surface_relative_humidity,
+                surface_dewpoint,
                 surface_pressure,
             )
         )
@@ -115,11 +115,11 @@ def compute(
         pressure,
         temperature.T,
         height.T,
-        relative_humidity.T,
+        specific_humidity.T,
         liquid_content.T,
         surface_temperature,
         surface_height,
-        surface_relative_humidity,
+        surface_dewpoint,
         surface_pressure,
         incidence_angle,
         frequency,
