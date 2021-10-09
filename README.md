@@ -40,8 +40,9 @@ python3 -m venv --upgrade-deps .venv
 
 Alternately, Gitlab CI jobs are set up to build
 [manylinux](https://github.com/pypa/manylinux) wheels for multiple versions of
-Python. The wheels can be downloaded as CI job artifacts (perhaps future work is
-to put them in a local PyPI registry).
+Python. The wheels can be downloaded as CI job artifacts, and for every release,
+are generated and saved in the [local package
+registry](http://gitlab.remss.com/access/atmospheric-rtm/-/packages).
 
 As another option, a [`Dockerfile`](Dockerfile) is provided. Build it with
 `docker` or `podman`:
