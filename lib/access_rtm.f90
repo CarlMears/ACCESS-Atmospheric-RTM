@@ -133,10 +133,9 @@ contains
     ! Convert relative humidity to specific humidity
     ! (https://earthscience.stackexchange.com/a/5077)
     !
-    ! w is the mass mixing ratio of the water vapor to dry air; note that
-    ! pressure is converted from hPa to Pa
+    ! w is the mass mixing ratio of the water vapor to dry air
     where (p > 0)
-      w = (pv * R_dry) / (R_vapor * (p * 1e2 - pv))
+      w = (pv * R_dry) / (R_vapor * (p - pv))
       q_h2o = w / (w + 1)
     elsewhere
       q_h2o = 0
