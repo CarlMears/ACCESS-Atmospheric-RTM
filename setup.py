@@ -15,6 +15,7 @@ extensions = [
             "lib/access_rtm.f90",
         ],
         extra_f90_compile_args=["-std=f2018", "-fopenmp"],
+        define_macros=[("NPY_NO_DEPRECATED_API", "NPY_1_7_API_VERSION")],
         extra_link_args=["-fopenmp"],
     )
 ]
