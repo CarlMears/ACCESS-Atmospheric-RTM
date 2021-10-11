@@ -201,41 +201,13 @@ def read_era5_data(
 
     # DEBUG: filter out the non-NCEP levels
     if len(levels) == 37:
-        # These are indices that correspond to NCEP levels, removing 6
-        # intermediate levels and then the 5 at the top of the atmosphere
-        ncep = [
-            0,
-            1,
-            2,
-            3,
-            4,
-            6,
-            8,
-            10,
-            11,
-            12,
-            13,
-            14,
-            15,
-            16,
-            17,
-            18,
-            19,
-            20,
-            22,
-            24,
-            26,
-            27,
-            28,
-            29,
-            30,
-            31,
-        ]
-        levels = levels[ncep]
-        temperature = temperature[:, :, :, ncep]
-        specific_humidity = specific_humidity[:, :, :, ncep]
-        height = height[:, :, :, ncep]
-        liquid_content = liquid_content[:, :, :, ncep]
+        # Remove the 5 levels at the top of the atmosphere
+        trim = np.s_[:32]
+        levels = levels[trim]
+        temperature = temperature[:, :, :, trim]
+        specific_humidity = specific_humidity[:, :, :, trim]
+        height = height[:, :, :, trim]
+        liquid_content = liquid_content[:, :, :, trim]
 
     return Era5DailyData(
         levels,
