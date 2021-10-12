@@ -63,7 +63,7 @@ To download the ERA5 datasets of interest for some time range, the script can be
 run with two environment variables set for CDS authentication:
 
 ```bash
-env CDS_UID=xxx CDS_API_KEY=xxx python3 -m access_atmosphere.download_era5 2020-01-01 2020-01-31 --out-dir era5
+env CDS_UID=xxx CDS_API_KEY=xxx python3 -m access_atmosphere.download 2020-01-01 2020-01-31 --out-dir era5
 ```
 
 For each day, two files are created: one for the surface data and one for the

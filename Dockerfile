@@ -11,7 +11,7 @@
 #
 # To run it:
 #
-# docker run access-atmospheric-rtm:latest -m access_atmosphere.download_era5 ...
+# docker run access-atmospheric-rtm:latest -m access_atmosphere.download ...
 #
 # Or:
 #
