@@ -8,11 +8,7 @@ The ERA5 datasets:
 
 The API reference: https://cds.climate.copernicus.eu/api-how-to
 
-Note that an API key is required to use CDS. After registering for an account
-with CDS, run this script with the following two environment variables set:
-
-- CDS_UID
-- CDS_API_KEY
+Note that a user ID and an API key are required to use CDS.
 """
 
 import argparse
@@ -144,7 +140,14 @@ class Era5Downloader:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Download relevant ERA5 data")
+    cds_help = (
+        "For CDS authentication, both 'CDS_UID' and 'CDS_API_KEY` "
+        "environment variables must be set"
+    )
+    parser = argparse.ArgumentParser(
+        description="Download relevant ERA5 data",
+        epilog=cds_help,
+    )
     parser.add_argument("start_date", type=date.fromisoformat, help="starting day")
     parser.add_argument("end_date", type=date.fromisoformat, help="ending day")
     parser.add_argument(
@@ -163,11 +166,7 @@ if __name__ == "__main__":
         cds_uid = os.environ["CDS_UID"]
         cds_api_key = os.environ["CDS_API_KEY"]
     except KeyError:
-        parser.exit(
-            1,
-            "For CDS authentication, both 'CDS_UID' and "
-            "'CDS_API_KEY' environment variables must be set",
-        )
+        parser.exit(1, cds_help)
 
     downloader = Era5Downloader(cds_uid, cds_api_key, args.out_dir)
     cur_day: date = args.start_date
