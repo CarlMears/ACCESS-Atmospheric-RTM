@@ -77,7 +77,7 @@ SURFACE_VARIABLES = [
 ]
 
 # The hours per day to download
-HOURS = ["00:00", "12:00"]
+HOURS = [f"{hour:02d}:00" for hour in range(24)]
 
 
 class Era5Downloader:
