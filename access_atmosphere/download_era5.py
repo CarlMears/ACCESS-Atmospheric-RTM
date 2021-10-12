@@ -80,47 +80,67 @@ SURFACE_VARIABLES = [
 HOURS = ["00:00", "12:00"]
 
 
-def download_day(client: cdsapi.Client, cur_day: date, out_dir: Path) -> None:
-    """Download the ERA5 datasets of interest for a single day."""
-    out_surface = out_dir / Path(f"era5_surface_{cur_day.isoformat()}.nc")
-    out_levels = out_dir / Path(f"era5_levels_{cur_day.isoformat()}.nc")
+class Era5Downloader:
+    """Download ERA5 data from CDS."""
 
-    if not out_surface.exists():
-        client.retrieve(
-            "reanalysis-era5-single-levels",
-            {
-                "product_type": "reanalysis",
-                "format": "netcdf",
-                "variable": SURFACE_VARIABLES,
-                "time": HOURS,
-                "year": cur_day.strftime("%Y"),
-                "month": cur_day.strftime("%m"),
-                "day": cur_day.strftime("%d"),
-            },
-            str(out_surface),
-        )
-        print(f"Data downloaded: {out_surface}")
-    else:
-        print(f"File already exists: {out_surface}")
+    def __init__(
+        self, uid: str, api_key: str, out_dir: Path, *, url: str = CDS_URL
+    ) -> None:
+        """Initialize the downloader with the CDS credentials and output directory."""
+        self.out_dir = out_dir
+        cds_key = ":".join([uid, api_key])
+        self.client = cdsapi.Client(url=url, key=cds_key, verify=True)
 
-    if not out_levels.exists():
-        client.retrieve(
-            "reanalysis-era5-pressure-levels",
-            {
-                "product_type": "reanalysis",
-                "format": "netcdf",
-                "variable": ATM_VARIABLES,
-                "pressure_level": LEVELS,
-                "time": HOURS,
-                "year": cur_day.strftime("%Y"),
-                "month": cur_day.strftime("%m"),
-                "day": cur_day.strftime("%d"),
-            },
-            str(out_levels),
-        )
-        print(f"Data downloaded: {out_levels}")
-    else:
-        print(f"File already exists: {out_levels}")
+    def download_day(self, day: date, verbose: bool = False) -> None:
+        """Download the ERA5 datasets of interest for a single day.
+
+        For a given day, two netCDF files are downloaded, one for the surface
+        and one for profile levels. If the files already exist in the output
+        directory, they are not re-downloaded.
+        """
+        out_surface = self.out_dir / Path(f"era5_surface_{day.isoformat()}.nc")
+        out_levels = self.out_dir / Path(f"era5_levels_{day.isoformat()}.nc")
+
+        if not out_surface.exists():
+            self.client.retrieve(
+                "reanalysis-era5-single-levels",
+                {
+                    "product_type": "reanalysis",
+                    "format": "netcdf",
+                    "variable": SURFACE_VARIABLES,
+                    "time": HOURS,
+                    "year": day.strftime("%Y"),
+                    "month": day.strftime("%m"),
+                    "day": day.strftime("%d"),
+                },
+                str(out_surface),
+            )
+            if verbose:
+                print(f"Data downloaded: {out_surface}")
+        else:
+            if verbose:
+                print(f"File already exists: {out_surface}")
+
+        if not out_levels.exists():
+            self.client.retrieve(
+                "reanalysis-era5-pressure-levels",
+                {
+                    "product_type": "reanalysis",
+                    "format": "netcdf",
+                    "variable": ATM_VARIABLES,
+                    "pressure_level": LEVELS,
+                    "time": HOURS,
+                    "year": day.strftime("%Y"),
+                    "month": day.strftime("%m"),
+                    "day": day.strftime("%d"),
+                },
+                str(out_levels),
+            )
+            if verbose:
+                print(f"Data downloaded: {out_levels}")
+        else:
+            if verbose:
+                print(f"File already exists: {out_levels}")
 
 
 if __name__ == "__main__":
@@ -149,11 +169,9 @@ if __name__ == "__main__":
             "'CDS_API_KEY' environment variables must be set",
         )
 
-    cds_key = ":".join([cds_uid, cds_api_key])
-    c = cdsapi.Client(url=CDS_URL, key=cds_key, verify=True)
-
+    downloader = Era5Downloader(cds_uid, cds_api_key, args.out_dir)
     cur_day: date = args.start_date
     end_day: date = args.end_date
     while cur_day <= end_day:
-        download_day(c, cur_day, args.out_dir)
+        downloader.download_day(cur_day)
         cur_day += timedelta(days=1)
