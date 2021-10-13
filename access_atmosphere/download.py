@@ -98,6 +98,7 @@ class Era5Downloader:
         out_levels = self.out_dir / Path(f"era5_levels_{day.isoformat()}.nc")
 
         if not out_surface.exists():
+            self.out_dir.mkdir(exist_ok=True, parents=True)
             self.client.retrieve(
                 "reanalysis-era5-single-levels",
                 {
@@ -118,6 +119,7 @@ class Era5Downloader:
                 print(f"File already exists: {out_surface}")
 
         if not out_levels.exists():
+            self.out_dir.mkdir(exist_ok=True, parents=True)
             self.client.retrieve(
                 "reanalysis-era5-pressure-levels",
                 {
