@@ -10,19 +10,7 @@ module access_rtm
   use wvap_convert, only: buck_vap
   implicit none
   private
-  public :: NMAX, compute_rtm
-
-  ! ! Number of hours used per day (TODO: probably increase to 24 later)
-  ! integer, parameter :: NUM_HR = 2
-  ! integer(int32), dimension(NUM_HR), parameter :: HOURS = [0, 12]
-
-  ! ! All data is on a 0.25-degree grid
-  ! integer, parameter :: NUM_LAT = 721, NUM_LON = 1440
-  ! real(real64), parameter :: DLAT = 0.25, DLON = 0.25
-  ! real(real64), parameter :: LAT0 = -90, LON0 = -180
-
-  ! Maximum number of pressure levels to use
-  integer, parameter :: NMAX = 26
+  public :: compute_rtm
 
 contains
 
@@ -30,31 +18,31 @@ contains
   ! Compute the RTM
   !
   ! Returns 0 if all okay
-  subroutine compute_rtm(num_points, num_freq, &
+  subroutine compute_rtm(num_levels, num_points, num_freq, &
     levels, temperature, height, specific_humidity, liquid_content, &
     surface_temperature, surface_height, surface_dewpoint, surface_pressure, &
     eia, freq, tran, tb_up, tb_down)
-    integer, intent(in) :: num_points, num_freq
-    real(real32), dimension(NMAX), intent(in) :: levels
+    integer, intent(in) :: num_levels, num_points, num_freq
+    real(real32), dimension(num_levels), intent(in) :: levels
     real(real32), dimension(num_points), intent(in) :: surface_temperature, surface_height, &
-      surface_dewpoint, surface_pressure
-    real(real32), dimension(NMAX, num_points), intent(in) :: temperature, height, &
-      specific_humidity, liquid_content
+    surface_dewpoint, surface_pressure
+    real(real32), dimension(num_levels, num_points), intent(in) :: temperature, height, &
+    specific_humidity, liquid_content
     real(real32), dimension(num_freq), intent(in) :: eia, freq
     real(real32), dimension(num_freq, num_points), intent(out) :: tran, tb_up, tb_down
 
     integer :: ibegin, ifreq, i
-    real(real32), dimension(0:NMAX) :: p, t, pv, rhol, z
+    real(real32), dimension(0:num_levels) :: p, t, pv, rhol, z
 
     !$omp parallel do private(ibegin, p, t, pv, rhol, z)
     do i = 1, num_points
-      call prepare_parameters(levels(:), surface_temperature(i), temperature(:, i), &
+      call prepare_parameters(num_levels, levels(:), surface_temperature(i), temperature(:, i), &
         surface_height(i), height(:, i), &
         surface_dewpoint(i), specific_humidity(:, i), &
         liquid_content(:, i), surface_pressure(i), &
         ibegin, p, t, pv, rhol, z)
       do ifreq = 1, num_freq
-        call atmo_params(p, t, pv, rhol, z, ibegin, eia(ifreq), freq(ifreq), &
+        call atmo_params(num_levels, p, t, pv, rhol, z, ibegin, eia(ifreq), freq(ifreq), &
           tran(ifreq, i), tb_up(ifreq, i), tb_down(ifreq, i))
       end do
     end do
@@ -62,18 +50,19 @@ contains
 
   ! ----------------------------------------------------------------------
   ! From the ERA5 data, prepare these profile/surface parameters for the RTM
-  pure subroutine prepare_parameters(levels, surface_temperature, temperature, &
+  pure subroutine prepare_parameters(num_levels, levels, surface_temperature, temperature, &
     surface_height, height, surface_dewpoint, specific_humidity, &
     liquid_content, surface_pressure, &
     ibegin, p, t, pv, rhol, z)
+    integer, intent(in) :: num_levels
     real(real32), intent(in) :: surface_temperature, surface_height, surface_dewpoint, surface_pressure
-    real(real32), dimension(NMAX), intent(in) :: levels, temperature, height, specific_humidity, liquid_content
+    real(real32), dimension(num_levels), intent(in) :: levels, temperature, height, specific_humidity, liquid_content
     integer, intent(out) :: ibegin
-    real(real32), dimension(0:NMAX), intent(out) :: p, t, pv, rhol, z
+    real(real32), dimension(0:num_levels), intent(out) :: p, t, pv, rhol, z
 
     integer :: ipr
-    real(real32), dimension(0:NMAX) :: hgt, q_l
-    real(real32), dimension(0:NMAX) :: R_moist, q_h2o, w
+    real(real32), dimension(0:num_levels) :: hgt, q_l
+    real(real32), dimension(0:num_levels) :: R_moist, q_h2o, w
 
     ! Ideal gas constant (J/mol/K)
     real(real32), parameter :: R = 8.3144598
@@ -93,13 +82,13 @@ contains
     real(real32), parameter :: eps_scale = (1 - epsilon) / epsilon
 
     p(0) = 0.
-    p(1:NMAX) = levels(:)
+    p(1:num_levels) = levels(:)
 
     t(0) = surface_temperature
-    t(1:NMAX) = temperature(1:NMAX)
+    t(1:num_levels) = temperature(1:num_levels)
 
     hgt(0) = surface_height
-    hgt(1:NMAX) = height(1:NMAX)
+    hgt(1:num_levels) = height(1:num_levels)
 
     ! Convert specific humidity q to water vapor pressure P_v. The mass mixing
     ! ratio w is:
@@ -109,18 +98,18 @@ contains
     ! The vapor pressure is:
     !
     ! P_v = (w P) / (R_dry/R_vapor + w)
-    w(1:NMAX) = specific_humidity(1:NMAX) / (1. - specific_humidity(1:NMAX))
-    pv(1:NMAX) = (w(1:NMAX) * p(1:NMAX)) / (R_dry / R_vapor + w(1:NMAX))
+    w(1:num_levels) = specific_humidity(1:num_levels) / (1. - specific_humidity(1:num_levels))
+    pv(1:num_levels) = (w(1:num_levels) * p(1:num_levels)) / (R_dry / R_vapor + w(1:num_levels))
 
     ! For the surface, convert dewpoint to vapor pressure using the Buck equation
     pv(0) = buck_vap(surface_dewpoint)
 
     q_l(0) = 0.
-    q_l(1:NMAX) = liquid_content(1:NMAX)
+    q_l(1:num_levels) = liquid_content(1:num_levels)
 
     ! Find "ibegin", or the starting index for the surface
     ibegin = -1
-    do ipr = 1, NMAX
+    do ipr = 1, num_levels
       if (p(ipr) <= surface_pressure) then
         ibegin = ipr - 1
         exit
@@ -164,18 +153,18 @@ contains
 
   ! ----------------------------------------------------------------------
   ! Apply the RTM to obtain atmospheric terms
-  subroutine atmo_params(p, t, pv, rhol, z, ibegin, &
+  subroutine atmo_params(num_levels, p, t, pv, rhol, z, ibegin, &
        eia, freq, tran, tb_up, tb_down)
-    real(real32), dimension(0:NMAX), intent(in) :: p, t, pv, rhol, z
-    integer, intent(in) :: ibegin
+    integer, intent(in) :: num_levels, ibegin
+    real(real32), dimension(0:num_levels), intent(in) :: p, t, pv, rhol, z
     real(real32), intent(in) :: eia, freq
     real(real32), intent(out) :: tran, tb_up, tb_down
 
     real(real32) :: abh2o,abo2,abcld
-    real(real32), dimension(0:NMAX) :: tabs
+    real(real32), dimension(0:num_levels) :: tabs
     integer :: ipr
 
-    do ipr = ibegin,NMAX
+    do ipr = ibegin,num_levels
       ! Water/oxygen absorption coefficients in Np/km
       call fdabscoeff(freq,p(ipr),t(ipr),pv(ipr), abh2o,abo2)
 
@@ -190,7 +179,7 @@ contains
        tabs(ipr) = (abh2o + abo2 + abcld) * 1.e-3
     end do
 
-    call atm_tran(NMAX-ibegin,eia,t(ibegin:NMAX),z(ibegin:NMAX),tabs(ibegin:NMAX), &
+    call atm_tran(num_levels-ibegin,eia,t(ibegin:num_levels),z(ibegin:num_levels),tabs(ibegin:num_levels), &
          tran,tb_down,tb_up)
   end subroutine atmo_params
 
