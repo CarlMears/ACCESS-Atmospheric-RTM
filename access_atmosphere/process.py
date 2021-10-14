@@ -189,7 +189,9 @@ def convert(
     verbose: bool = False,
 ) -> None:
     """Read ERA5 profile/surface files and run the RTM and write its output."""
-    era5_data = era5.read_era5_data(era5_surface_input, era5_levels_input, verbose)
+    era5_data = era5.read_era5_data(
+        era5_surface_input, era5_levels_input, verbose=verbose
+    )
 
     if verbose:
         print("Running RTM over all data")
