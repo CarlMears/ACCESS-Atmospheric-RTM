@@ -199,16 +199,6 @@ def read_era5_data(
     columnar_water_vapor = np.flip(columnar_water_vapor, 1)
     columnar_cloud_liquid = np.flip(columnar_cloud_liquid, 1)
 
-    # DEBUG: filter out the non-NCEP levels
-    if len(levels) == 37:
-        # Remove the 5 levels at the top of the atmosphere
-        trim = np.s_[:32]
-        levels = levels[trim]
-        temperature = temperature[:, :, :, trim]
-        specific_humidity = specific_humidity[:, :, :, trim]
-        height = height[:, :, :, trim]
-        liquid_content = liquid_content[:, :, :, trim]
-
     return Era5DailyData(
         levels,
         lats,

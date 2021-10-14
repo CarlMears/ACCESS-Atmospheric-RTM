@@ -55,11 +55,13 @@ LEVELS = [
     "30",
     "20",
     "10",
-    "7",
-    "5",
-    "3",
-    "2",
-    "1",
+    # These last five levels at the top of the atmosphere are available from
+    # ERA5 but are currently unused
+    # "7",
+    # "5",
+    # "3",
+    # "2",
+    # "1",
 ]
 
 # The ERA5 variables for the pressure-level analysis product
