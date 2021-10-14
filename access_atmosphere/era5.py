@@ -26,12 +26,12 @@ class Era5DailyData(NamedTuple):
     # Hours since 1900-01-01, dimensioned as (num_time, ).
     time: NDArray[np.int32]
 
-    # Profile air temperature in Kelvin, dimensioned as (time, lats, lons, levels)
+    # Profile air temperature in kelvin, dimensioned as (time, lats, lons, levels)
     temperature: NDArray[np.float32]
 
-    # Profile relative humidity in percentage (0 to 100), dimensioned as (time,
-    # lats, lons, levels)
-    relative_humidity: NDArray[np.float32]
+    # Profile specific humidity in kg/kg, dimensioned as (time, lats, lons,
+    # levels)
+    specific_humidity: NDArray[np.float32]
 
     # Geopotential height profile in meters, dimensioned as (time, lats, lons, levels)
     height: NDArray[np.float32]
@@ -46,8 +46,8 @@ class Era5DailyData(NamedTuple):
     # 2-meter air temperature in kelvin, dimensioned as (time, lats, lons)
     surface_temperature: NDArray[np.float32]
 
-    # 2-meter relative humidity in percentage, dimensioned as (time, lats, lons)
-    surface_relative_humidity: NDArray[np.float32]
+    # 2-meter dewpoint in kelvin, dimensioned as (time, lats, lons)
+    surface_dewpoint: NDArray[np.float32]
 
     # Geopotential height at the surface in meters, dimensioned as (time, lats, lons)
     surface_height: NDArray[np.float32]
@@ -62,7 +62,7 @@ class Era5DailyData(NamedTuple):
 def buck_vap(temperature: NDArray[np.float32]) -> NDArray[np.float32]:
     """Buck equation.
 
-    Use the Buck equation to convert temperature in Kelvin into water vapor
+    Use the Buck equation to convert temperature in kelvin into water vapor
     saturation pressure in hPa. The equation is from [1], which cites Buck 1996.
 
     To convert to water vapor partial pressure, multiply the result by the
@@ -109,7 +109,7 @@ def read_era5_data(
         # now we'll just be really trusting
         levels = f["level"][:]
         temperature = f["t"][time_subset, :, :, :]
-        relative_humidity = f["r"][time_subset, :, :, :]
+        specific_humidity = f["q"][time_subset, :, :, :]
         height = f["z"][time_subset, :, :, :]
         liquid_content = f["clwc"][time_subset, :, :, :]
 
@@ -134,7 +134,7 @@ def read_era5_data(
             columnar_cloud_liquid,
             levels,
             temperature,
-            relative_humidity,
+            specific_humidity,
             height,
             liquid_content,
         )
@@ -151,7 +151,7 @@ def read_era5_data(
     columnar_cloud_liquid = np.ma.getdata(columnar_cloud_liquid).astype(np.float32)
     levels = np.ma.getdata(levels).astype(np.float32)
     temperature = np.ma.getdata(temperature).astype(np.float32)
-    relative_humidity = np.ma.getdata(relative_humidity).astype(np.float32)
+    specific_humidity = np.ma.getdata(specific_humidity).astype(np.float32)
     height = np.ma.getdata(height).astype(np.float32)
     liquid_content = np.ma.getdata(liquid_content).astype(np.float32)
 
@@ -167,18 +167,10 @@ def read_era5_data(
     # Convert surface pressure from Pa to hPa
     surface_pressure *= 1e-2
 
-    # Convert dewpoint at 2 m to relative humidity at 2 m
-    # http://bmcnoldy.rsmas.miami.edu/Humidity.html
-    # However, rather than using the "Magnus approximation" I use the Buck equation.
-    surface_relative_humidity = cast(
-        NDArray[np.float32],
-        100.0 * buck_vap(surface_dewpoint) / buck_vap(surface_temperature),
-    )
-
     # The 4d arrays should be reordered from (time, levels, lat, lon) to (time,
     # lat, lon, levels)
     temperature = np.moveaxis(temperature, 1, -1)
-    relative_humidity = np.moveaxis(relative_humidity, 1, -1)
+    specific_humidity = np.moveaxis(specific_humidity, 1, -1)
     height = np.moveaxis(height, 1, -1)
     liquid_content = np.moveaxis(liquid_content, 1, -1)
 
@@ -197,12 +189,12 @@ def read_era5_data(
         return np.roll(a[:, ::-1, :], half_lon_len, axis=2)
 
     temperature = flip_and_roll_4d(temperature)
-    relative_humidity = flip_and_roll_4d(relative_humidity)
+    specific_humidity = flip_and_roll_4d(specific_humidity)
     height = flip_and_roll_4d(height)
     liquid_content = flip_and_roll_4d(liquid_content)
     surface_pressure = flip_and_roll_3d(surface_pressure)
     surface_temperature = flip_and_roll_3d(surface_temperature)
-    surface_relative_humidity = flip_and_roll_3d(surface_relative_humidity)
+    surface_dewpoint = flip_and_roll_3d(surface_dewpoint)
     surface_height = flip_and_roll_3d(surface_height)
     columnar_water_vapor = flip_and_roll_3d(columnar_water_vapor)
     columnar_cloud_liquid = flip_and_roll_3d(columnar_cloud_liquid)
@@ -213,12 +205,12 @@ def read_era5_data(
         lons,
         time,
         temperature,
-        relative_humidity,
+        specific_humidity,
         height,
         liquid_content,
         surface_pressure,
         surface_temperature,
-        surface_relative_humidity,
+        surface_dewpoint,
         surface_height,
         columnar_water_vapor,
         columnar_cloud_liquid,
