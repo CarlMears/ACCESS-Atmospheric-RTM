@@ -1,7 +1,7 @@
 """Read ERA5 daily surface and profile data."""
 
 from pathlib import Path
-from typing import NamedTuple, cast
+from typing import NamedTuple, SupportsIndex, Union, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -81,7 +81,7 @@ def buck_vap(temperature: NDArray[np.float32]) -> NDArray[np.float32]:
 def read_era5_data(
     surface_file: Path,
     levels_file: Path,
-    time_subset: slice = slice(None),
+    time_subset: Union[slice, SupportsIndex] = slice(None),
     verbose: bool = False,
 ) -> Era5DailyData:
     """Read the pair of ERA5 surface/levels files.
