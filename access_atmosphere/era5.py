@@ -79,21 +79,27 @@ def buck_vap(temperature: NDArray[np.float32]) -> NDArray[np.float32]:
 
 
 def read_era5_data(
-    surface_file: Path, levels_file: Path, verbose: bool = False
+    surface_file: Path,
+    levels_file: Path,
+    time_subset: slice = slice(None),
+    verbose: bool = False,
 ) -> Era5DailyData:
-    """Read the pair of ERA5 surface/levels files."""
+    """Read the pair of ERA5 surface/levels files.
+
+    Optionally, a subset of the time values can be read.
+    """
     if verbose:
         print(f"Reading surface data: {surface_file}")
     with Dataset(surface_file, "r") as f:
         lats = f["latitude"][:]
         lons = f["longitude"][:]
-        time = f["time"][:]
-        surface_pressure = f["sp"][:]
-        surface_temperature = f["t2m"][:]
-        surface_dewpoint = f["d2m"][:]
-        surface_height = f["z"][:]
-        columnar_water_vapor = f["tcwv"][:]
-        columnar_cloud_liquid = f["tclw"][:]
+        time = f["time"][time_subset]
+        surface_pressure = f["sp"][time_subset, :, :]
+        surface_temperature = f["t2m"][time_subset, :, :]
+        surface_dewpoint = f["d2m"][time_subset, :, :]
+        surface_height = f["z"][time_subset, :, :]
+        columnar_water_vapor = f["tcwv"][time_subset, :, :]
+        columnar_cloud_liquid = f["tclw"][time_subset, :, :]
 
     if verbose:
         print(f"Reading profiles data: {levels_file}")
@@ -102,10 +108,10 @@ def read_era5_data(
         # checked to ensure the levels file matches the surface file...but for
         # now we'll just be really trusting
         levels = f["level"][:]
-        temperature = f["t"][:]
-        relative_humidity = f["r"][:]
-        height = f["z"][:]
-        liquid_content = f["clwc"][:]
+        temperature = f["t"][time_subset, :, :, :]
+        relative_humidity = f["r"][time_subset, :, :, :]
+        height = f["z"][time_subset, :, :, :]
+        liquid_content = f["clwc"][time_subset, :, :, :]
 
     if verbose:
         print("Post-processing ERA5 data")
