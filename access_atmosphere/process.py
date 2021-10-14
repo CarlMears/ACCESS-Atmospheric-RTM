@@ -13,7 +13,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter_ns
-from typing import NamedTuple
+from typing import NamedTuple, Optional, Sequence
 
 import numpy as np
 from netCDF4 import Dataset, getlibversion, num2date
@@ -186,11 +186,12 @@ def convert(
     era5_surface_input: Path,
     era5_levels_input: Path,
     rtm_output: Path,
+    hours: Optional[Sequence[int]],
     verbose: bool = False,
 ) -> None:
     """Read ERA5 profile/surface files and run the RTM and write its output."""
     era5_data = era5.read_era5_data(
-        era5_surface_input, era5_levels_input, verbose=verbose
+        era5_surface_input, era5_levels_input, hours, verbose=verbose
     )
 
     if verbose:
@@ -254,9 +255,15 @@ if __name__ == "__main__":
         type=Path,
         help="RTM daily output file",
     )
+    parser.add_argument(
+        "--hour",
+        action="append",
+        type=int,
+        help="Hour (between 0 and 23) to process, can be specified multiple times",
+    )
     args = parser.parse_args()
 
     print(f"ERA5 surface file: {args.era5_surface}")
     print(f"ERA5 levels file: {args.era5_levels}")
     print(f"RTM output file: {args.rtm_out}")
-    convert(args.era5_surface, args.era5_levels, args.rtm_out, verbose=True)
+    convert(args.era5_surface, args.era5_levels, args.rtm_out, args.hour, verbose=True)
