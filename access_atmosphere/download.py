@@ -174,5 +174,5 @@ if __name__ == "__main__":
     cur_day: date = args.start_date
     end_day: date = args.end_date
     while cur_day <= end_day:
-        downloader.download_day(cur_day)
+        downloader.download_day(cur_day, verbose=True)
         cur_day += timedelta(days=1)

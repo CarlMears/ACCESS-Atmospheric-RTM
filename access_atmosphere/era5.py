@@ -1,7 +1,7 @@
 """Read ERA5 daily surface and profile data."""
 
 from pathlib import Path
-from typing import NamedTuple, SupportsIndex, Union, cast
+from typing import NamedTuple, Optional, Sequence, Union, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -81,7 +81,7 @@ def buck_vap(temperature: NDArray[np.float32]) -> NDArray[np.float32]:
 def read_era5_data(
     surface_file: Path,
     levels_file: Path,
-    time_subset: Union[slice, SupportsIndex] = slice(None),
+    time_subset: Optional[Sequence[int]] = None,
     verbose: bool = False,
 ) -> Era5DailyData:
     """Read the pair of ERA5 surface/levels files.
@@ -90,16 +90,24 @@ def read_era5_data(
     """
     if verbose:
         print(f"Reading surface data: {surface_file}")
+        if time_subset is not None:
+            print(f"Subsetting hours to: {time_subset}")
+
+    times: Union[slice, Sequence[int]]
+    if time_subset is None:
+        times = slice(None)
+    else:
+        times = time_subset
     with Dataset(surface_file, "r") as f:
         lats = f["latitude"][:]
         lons = f["longitude"][:]
-        time = f["time"][time_subset]
-        surface_pressure = f["sp"][time_subset, :, :]
-        surface_temperature = f["t2m"][time_subset, :, :]
-        surface_dewpoint = f["d2m"][time_subset, :, :]
-        surface_height = f["z"][time_subset, :, :]
-        columnar_water_vapor = f["tcwv"][time_subset, :, :]
-        columnar_cloud_liquid = f["tclw"][time_subset, :, :]
+        time = f["time"][times]
+        surface_pressure = f["sp"][times, :, :]
+        surface_temperature = f["t2m"][times, :, :]
+        surface_dewpoint = f["d2m"][times, :, :]
+        surface_height = f["z"][times, :, :]
+        columnar_water_vapor = f["tcwv"][times, :, :]
+        columnar_cloud_liquid = f["tclw"][times, :, :]
 
     if verbose:
         print(f"Reading profiles data: {levels_file}")
@@ -108,10 +116,10 @@ def read_era5_data(
         # checked to ensure the levels file matches the surface file...but for
         # now we'll just be really trusting
         levels = f["level"][:]
-        temperature = f["t"][time_subset, :, :, :]
-        specific_humidity = f["q"][time_subset, :, :, :]
-        height = f["z"][time_subset, :, :, :]
-        liquid_content = f["clwc"][time_subset, :, :, :]
+        temperature = f["t"][times, :, :, :]
+        specific_humidity = f["q"][times, :, :, :]
+        height = f["z"][times, :, :, :]
+        liquid_content = f["clwc"][times, :, :, :]
 
     if verbose:
         print("Post-processing ERA5 data")
