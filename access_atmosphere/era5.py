@@ -1,7 +1,7 @@
 """Read ERA5 daily surface and profile data."""
 
 from pathlib import Path
-from typing import NamedTuple, Optional, Sequence, SupportsIndex, Union, cast
+from typing import NamedTuple, Optional, Sequence, Union, cast
 
 import numpy as np
 from numpy.typing import NDArray
