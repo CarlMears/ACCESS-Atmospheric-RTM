@@ -182,30 +182,22 @@ def read_era5_data(
     height = np.moveaxis(height, 1, -1)
     liquid_content = np.moveaxis(liquid_content, 1, -1)
 
-    # The latitudes/longitudes need to be adjusted. In the ERA5 files, the
-    # latitudes are in *descending* order from 90 to -90, and while the longitudes
-    # are in ascending order, they go from 0 to 360. The desired output is that
-    # the latitudes go from -90 to 90 and longitudes from -180 to 180.
+    # The latitudes need to be adjusted. In the ERA5 files, the latitudes are in
+    # *descending* order from 90 to -90, and the longitudes are in ascending
+    # order from 0 to 360. Leave the longitudes alone, but flip the latitudes so
+    # they go from -90 to 90.
     lats = -lats
-    lons = lons - 180.0
-    half_lon_len = len(lons) // 2
 
-    def flip_and_roll_4d(a: NDArray[np.float32]) -> NDArray[np.float32]:
-        return np.roll(a[:, ::-1, :, :], half_lon_len, axis=2)
-
-    def flip_and_roll_3d(a: NDArray[np.float32]) -> NDArray[np.float32]:
-        return np.roll(a[:, ::-1, :], half_lon_len, axis=2)
-
-    temperature = flip_and_roll_4d(temperature)
-    specific_humidity = flip_and_roll_4d(specific_humidity)
-    height = flip_and_roll_4d(height)
-    liquid_content = flip_and_roll_4d(liquid_content)
-    surface_pressure = flip_and_roll_3d(surface_pressure)
-    surface_temperature = flip_and_roll_3d(surface_temperature)
-    surface_dewpoint = flip_and_roll_3d(surface_dewpoint)
-    surface_height = flip_and_roll_3d(surface_height)
-    columnar_water_vapor = flip_and_roll_3d(columnar_water_vapor)
-    columnar_cloud_liquid = flip_and_roll_3d(columnar_cloud_liquid)
+    temperature = np.flip(temperature, 1)
+    specific_humidity = np.flip(specific_humidity, 1)
+    height = np.flip(height, 1)
+    liquid_content = np.flip(liquid_content, 1)
+    surface_pressure = np.flip(surface_pressure, 1)
+    surface_temperature = np.flip(surface_temperature, 1)
+    surface_dewpoint = np.flip(surface_dewpoint, 1)
+    surface_height = np.flip(surface_height, 1)
+    columnar_water_vapor = np.flip(columnar_water_vapor, 1)
+    columnar_cloud_liquid = np.flip(columnar_cloud_liquid, 1)
 
     return Era5DailyData(
         levels,
