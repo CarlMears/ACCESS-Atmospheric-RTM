@@ -40,7 +40,7 @@ class RtmDailyData(NamedTuple):
     lats: NDArray[np.float32]
 
     # Longitude in degrees East, dimensioned as (num_lons, ). They should be in
-    # ascending order (e.g., -180 to 180).
+    # ascending order (e.g., 0 to 360).
     lons: NDArray[np.float32]
 
     # Hours since 1900-01-01, dimensioned as (num_time, ).
@@ -95,8 +95,8 @@ def write_rtm_data(rtm_data: RtmDailyData, rtm_output: Path) -> None:
         f.setncattr_string("creator_url", "http://www.remss.com")
         f.setncattr("geospatial_lat_min", np.float32(-90.0))
         f.setncattr("geospatial_lat_max", np.float32(90.0))
-        f.setncattr("geospatial_lon_min", np.float32(-180.0))
-        f.setncattr("geospatial_lon_max", np.float32(180.0))
+        f.setncattr("geospatial_lon_min", np.float32(0.0))
+        f.setncattr("geospatial_lon_max", np.float32(360.0))
         f.setncattr_string("time_coverage_start", time_start)
         f.setncattr_string("time_coverage_end", time_end)
         f.setncattr_string("standard_name_vocabulary", "CF Standard Name Table v78")
