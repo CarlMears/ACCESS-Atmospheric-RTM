@@ -17,7 +17,7 @@ build-library:
 
 build-linux:
   stage: build
-  image: python:3.9
+  image: python:3.10
   needs: []
   cache:
     paths:
@@ -52,7 +52,7 @@ build-manylinux2014:
 
 import-linux:
   stage: test
-  image: python:3.9-slim
+  image: python:3.10-slim
   needs: [build-linux]
   cache:
     paths:
@@ -68,7 +68,7 @@ import-linux:
 
 format:
   stage: test
-  image: python:3.9-slim
+  image: python:3.10-slim
   needs: []
   cache:
     paths:
@@ -84,7 +84,7 @@ format:
 
 lint:
   stage: test
-  image: python:3.9-slim
+  image: python:3.10-slim
   needs: []
   cache:
     paths:
@@ -102,7 +102,7 @@ lint:
 
 mypy:
   stage: test
-  image: python:3.9-slim
+  image: python:3.10-slim
   needs: []
   cache:
     paths:
@@ -130,7 +130,7 @@ mypy:
 
 publish-pypi:
   stage: deploy
-  image: python:3.9-slim
+  image: python:3.10-slim
   needs: ["build-linux", "build-manylinux2014"]
   # Once a package version is uploaded to a PyPI registry, it cannot be updated.
   # So to ensure no conflicts, only tagged releases are published.

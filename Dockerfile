@@ -21,7 +21,7 @@
 #
 # docker run -v $PWD:/data access-atmospheric-rtm:latest -m access_atmosphere.process /data/era5_surface.nc /data/era5_levels.nc /data/rtm_out.nc
 
-FROM docker.io/library/python:3.9 AS build
+FROM docker.io/library/python:3.10 AS build
 
 RUN apt-get update && \
     apt-get install -y gfortran
@@ -33,7 +33,7 @@ COPY . .
 
 RUN /root/venv/bin/python3 -m build
 
-FROM docker.io/library/python:3.9-slim
+FROM docker.io/library/python:3.10-slim
 
 RUN apt-get update && \
     apt-get install -y libgfortran5 libgomp1
