@@ -122,7 +122,7 @@ def read_era5_data(
         liquid_content = f["clwc"][times, :, :, :]
 
     if verbose:
-        print("Post-processing ERA5 data")
+        print(f"Post-processing ERA5 data ({len(levels)} pressure levels)")
 
     # By default, netCDF4 returns masked arrays for all the variables above.
     # However, there shouldn't be any values that are actually masked in the
