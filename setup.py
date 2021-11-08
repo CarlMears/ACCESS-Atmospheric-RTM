@@ -22,7 +22,7 @@ extensions = [
 
 setup(
     name="access-atmosphere",
-    version="0.1.0",
+    version="0.2.0",
     packages=["access_atmosphere"],
     python_requires=">=3.7",
     install_requires=[
