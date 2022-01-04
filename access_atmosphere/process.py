@@ -22,10 +22,14 @@ from numpy.typing import NDArray
 from . import rtm, era5
 
 # Reference frequencies (in GHz) to use
-REF_FREQ = np.array([1.41, 6.8, 10.7, 18.7, 23.8, 37.0, 89.0], np.float32)
+REF_FREQ: NDArray[np.float32] = np.array(
+    [1.41, 6.8, 10.7, 18.7, 23.8, 37.0, 89.0], np.float32
+)
 
 # Reference Earth incidence angle to use for each reference frequency (in degrees)
-REF_EIA = np.array([40.0, 53.0, 53.0, 53.0, 53.0, 53.0, 53.0], np.float32)
+REF_EIA: NDArray[np.float32] = np.array(
+    [40.0, 53.0, 53.0, 53.0, 53.0, 53.0, 53.0], np.float32
+)
 
 
 class RtmDailyData(NamedTuple):
