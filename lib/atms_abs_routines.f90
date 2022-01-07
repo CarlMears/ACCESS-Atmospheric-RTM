@@ -106,6 +106,7 @@ contains
          773.839675,  671.00e-6,  0.130, 18.10e-3,  0.0,    0.0,   &
          834.145330,  180.00e-6,  0.147, 18.10e-3,  0.0,    0.0/
 
+    !$omp critical
     if (first) then
        first=.false.
        f0(:)=h(1,:)
@@ -115,6 +116,7 @@ contains
        a5(:)=0.001*h(5,:)
        a6(:)=0.001*h(6,:)
     end if
+    !$omp end critical
 
     tht = 300/t
     pwet=0.1*pv
@@ -228,7 +230,8 @@ contains
     !     t-exponent of self-broadening:
     real(real32), dimension(nlines), parameter :: b6 = [ &
          .61, .85, .54, .74, .89, .52, .50, .67, .65, .64, .72, 1.0, .68, .84, .78]
-    !
+
+    !$omp critical
     if (first) then
        first = .false.
        b1=1.8281089E+14*b1/f0**2
@@ -236,6 +239,7 @@ contains
        !1    b1(1)=1.01*b1(1)  !this modification is no longer done
        b3(1)=b3(1)/1.040 !modification 1
     end if
+    !$omp end critical
 
     if (pv <= 0.) then
        gamh2o=0
