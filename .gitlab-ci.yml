@@ -147,26 +147,3 @@ publish-pypi:
       python -m twine upload
       --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi
       dist/*.tar.gz dist/*manylinux*.whl
-
-# package-image:
-#   stage: deploy
-#   needs: []
-#   image: quay.io/podman/stable
-#   before_script:
-#     - podman version
-#   script:
-#     - echo "${CI_REGISTRY_PASSWORD}" | podman login --tls-verify=false --username "${CI_REGISTRY_USER}" --password-stdin "${CI_REGISTRY}"
-#     - >
-#       podman build
-#       --format docker
-#       --tag "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}"
-#       --build-arg=version="${CI_COMMIT_REF_NAME}"
-#       --build-arg=revision="${CI_COMMIT_SHORT_SHA}"
-#       --build-arg=source_date="$(git log -1 --pretty=%ci)"
-#       --build-arg=build_date="$(date --utc '+%Y-%m-%d %H:%M:%S%z')"
-#       ./
-#     - podman push --tls-verify=false "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}" "docker://${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}"
-#     - >
-#       if [[ "${CI_COMMIT_REF_NAME}" == "master" ]]; then
-#       podman push --tls-verify=false "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}" "docker://${CI_REGISTRY_IMAGE}:latest";
-#       fi
