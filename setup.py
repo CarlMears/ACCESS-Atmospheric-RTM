@@ -8,7 +8,6 @@ extensions = [
         # Note the order here is important
         sources=[
             "lib/access_rtm.pyf",
-            "lib/trig_degrees.f90",
             "lib/dielectric_meissner.f90",
             "lib/wvap_convert.f90",
             "lib/atms_abs_routines.f90",

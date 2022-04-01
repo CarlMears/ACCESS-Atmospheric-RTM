@@ -59,7 +59,6 @@ static_library('access_rtm',
         'access_rtm.f90',
         'atms_abs_routines.f90',
         'dielectric_meissner.f90',
-        'trig_degrees.f90',
         'wvap_convert.f90',
     ],
     dependencies : [openmp])

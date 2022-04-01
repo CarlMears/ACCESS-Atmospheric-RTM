@@ -9,7 +9,6 @@
 module atms_abs_routines
   use, intrinsic :: iso_fortran_env, only: real32, int32, real64
   use dielectric_meissner, only: meissner
-  use trig_degrees, only: cosd
   implicit none
   private
   public :: atm_tran, fdabscoeff, fdcldabs
@@ -393,5 +392,15 @@ contains
     al = (6.0*pi*rhol0/wavlen)*aimag((1.0-permit)/(2.0+permit))  ! Np/cm
     al = 1.0e5*al ! Np/km
   end subroutine fdcldabs
+
+  pure elemental function cosd(x)
+    real(real32), intent(in) :: x
+    real(real32) :: cosd
+
+    real(real32), parameter :: PI_F32 = 4.0_real32 * atan(1.0_real32)
+    real(real32), parameter :: DEG2RAD_F32 = PI_F32 / 180.0_real32
+
+    cosd = cos(x * DEG2RAD_F32)
+  end function cosd
 
 end module atms_abs_routines
