@@ -19,7 +19,7 @@ import numpy as np
 from netCDF4 import Dataset, getlibversion, num2date
 from numpy.typing import NDArray
 
-from . import rtm, era5
+from . import era5, rtm
 
 # Reference frequencies (in GHz) to use
 REF_FREQ: NDArray[np.float32] = np.array(

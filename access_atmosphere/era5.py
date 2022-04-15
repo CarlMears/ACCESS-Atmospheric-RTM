@@ -4,8 +4,8 @@ from pathlib import Path
 from typing import NamedTuple, Optional, Sequence, Union, cast
 
 import numpy as np
-from numpy.typing import NDArray
 from netCDF4 import Dataset
+from numpy.typing import NDArray
 
 
 class Era5DailyData(NamedTuple):
