@@ -68,62 +68,17 @@ import-linux:
     - pip install --progress-bar=off ./dist/access_atmosphere-*-linux_x86_64.whl
     - python -c 'import access_atmosphere'
 
-format:
-  stage: test
-  image: python:3.10-slim
-  needs: []
-  cache:
-    key: "$CI_JOB_NAME"
-    paths:
-      - .cache/pip
-  variables:
-    PIP_CACHE_DIR: "${CI_PROJECT_DIR}/.cache/pip"
-  before_script:
-    - python --version
-    - pip install --upgrade pip
-    - pip install --progress-bar=off black
-  script:
-    - black --check access_atmosphere
-
 lint:
   stage: test
   image: python:3.10-slim
   needs: []
-  cache:
-    key: "$CI_JOB_NAME"
-    paths:
-      - .cache/pip
-  variables:
-    PIP_CACHE_DIR: "${CI_PROJECT_DIR}/.cache/pip"
   before_script:
     - python --version
     - pip install --upgrade pip
-    - pip install --progress-bar=off flake8 pycodestyle pydocstyle
+    - pip install tox
   script:
-    - flake8 --count access_atmosphere
-    - pycodestyle -v access_atmosphere
-    - pydocstyle -v access_atmosphere
-
-mypy:
-  stage: test
-  image: python:3.10-slim
-  needs: []
-  cache:
-    key: "$CI_JOB_NAME"
-    paths:
-      - .cache/pip
-  variables:
-    PIP_CACHE_DIR: "${CI_PROJECT_DIR}/.cache/pip"
-  before_script:
-    - pip install --upgrade pip
-    - pip install --progress-bar=off lxml mypy
-  script:
-    - >
-      mypy --ignore-missing-imports --strict --pretty --show-error-context
-      --junit-xml mypy.junit.xml
-      --cobertura-xml-report .
-      --lineprecision-report .
-      access_atmosphere/
+    - tox -l
+    - tox -e black,flake8,mypy
   artifacts:
     paths:
       - mypy.junit.xml
@@ -132,6 +87,7 @@ mypy:
     reports:
       junit: mypy.junit.xml
       cobertura: cobertura.xml
+    when: always
 
 publish-pypi:
   stage: deploy
