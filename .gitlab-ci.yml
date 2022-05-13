@@ -86,7 +86,9 @@ lint:
       - lineprecision.txt
     reports:
       junit: mypy.junit.xml
-      cobertura: cobertura.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: cobertura.xml
     when: always
 
 publish-pypi:
