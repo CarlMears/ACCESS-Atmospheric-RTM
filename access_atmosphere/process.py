@@ -190,12 +190,12 @@ def convert(
     era5_surface_input: Path,
     era5_levels_input: Path,
     rtm_output: Path,
-    hours: Optional[Sequence[int]],
+    time_indices: Optional[Sequence[int]],
     verbose: bool = False,
 ) -> None:
     """Read ERA5 profile/surface files and run the RTM and write its output."""
     era5_data = era5.read_era5_data(
-        era5_surface_input, era5_levels_input, hours, verbose=verbose
+        era5_surface_input, era5_levels_input, time_indices, verbose=verbose
     )
 
     if verbose:
@@ -260,14 +260,14 @@ if __name__ == "__main__":
         help="RTM daily output file",
     )
     parser.add_argument(
-        "--hour",
+        "--time",
         action="append",
         type=int,
-        help="Hour (between 0 and 23) to process, can be specified multiple times",
+        help="Time index to use in the ERA5 data, can be specified multiple times",
     )
     args = parser.parse_args()
 
     print(f"ERA5 surface file: {args.era5_surface}")
     print(f"ERA5 levels file: {args.era5_levels}")
     print(f"RTM output file: {args.rtm_out}")
-    convert(args.era5_surface, args.era5_levels, args.rtm_out, args.hour, verbose=True)
+    convert(args.era5_surface, args.era5_levels, args.rtm_out, args.time, verbose=True)

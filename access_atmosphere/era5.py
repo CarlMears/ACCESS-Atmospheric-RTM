@@ -91,7 +91,7 @@ def read_era5_data(
     if verbose:
         print(f"Reading surface data: {surface_file}")
         if time_subset is not None:
-            print(f"Subsetting hours to: {time_subset}")
+            print(f"Subsetting hour indices to: {time_subset}")
 
     times: Union[slice, Sequence[int]]
     if time_subset is None:
