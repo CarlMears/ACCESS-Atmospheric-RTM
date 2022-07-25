@@ -51,6 +51,10 @@ As another option, a [`Dockerfile`](Dockerfile) is provided. Build it with
 podman build -t access_atmosphere -f Dockerfile
 ```
 
+Following the [NumPy policy of supported Python
+versions](https://numpy.org/neps/nep-0029-deprecation_policy.html#drop-schedule),
+Python 3.8 is the minimum version supported.
+
 ## Running
 
 ### Downloading ERA5 data
