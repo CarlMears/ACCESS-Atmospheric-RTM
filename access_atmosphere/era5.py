@@ -78,6 +78,22 @@ def buck_vap(temperature: NDArray[np.float32]) -> NDArray[np.float32]:
     )
 
 
+def read_time_indices(surface_file: Path, levels_file: Path) -> list[int]:
+    """Return the available time indices in the two ERA5 files."""
+    with Dataset(surface_file, "r") as f:
+        surface_times = f["time"][:]
+    with Dataset(levels_file, "r") as f:
+        level_times = f["time"][:]
+
+    # The "time" coordinate variable is an integer so an exact comparison works
+    if not np.array_equal(surface_times, level_times):
+        raise Exception("ERA5 surface/level files have mismatched times")
+
+    # The actual values for the time variable don't matter at this point, only
+    # the available indices, which go from 0 to N-1.
+    return list(range(len(surface_times)))
+
+
 def read_era5_data(
     surface_file: Path,
     levels_file: Path,

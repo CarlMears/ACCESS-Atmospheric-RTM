@@ -186,18 +186,39 @@ def write_rtm_data(rtm_data: RtmDailyData, rtm_output: Path) -> None:
         v.setncattr_string("coordinates", "lat lon")
 
 
-def convert(
-    era5_surface_input: Path,
-    era5_levels_input: Path,
-    rtm_output: Path,
-    time_indices: Optional[Sequence[int]],
-    verbose: bool = False,
-) -> None:
-    """Read ERA5 profile/surface files and run the RTM and write its output."""
-    era5_data = era5.read_era5_data(
-        era5_surface_input, era5_levels_input, time_indices, verbose=verbose
+def combine_rtm(hourly: Sequence[RtmDailyData]) -> RtmDailyData:
+    """Combine subsets of daily RTM data together."""
+    if len(hourly) == 0:
+        raise Exception("At least one input is needed to combine")
+
+    # Check that all coordinate variables match except for the "time" variable
+    if not all(np.allclose(data.lats, hourly[0].lats) for data in hourly):
+        raise Exception("Mismatched latitudes")
+    if not all(np.allclose(data.lons, hourly[0].lons) for data in hourly):
+        raise Exception("Mismatched longitudes")
+    if not all(np.allclose(data.frequency, hourly[0].frequency) for data in hourly):
+        raise Exception("Mismatched frequencies")
+    if not all(np.allclose(data.incidence, hourly[0].incidence) for data in hourly):
+        raise Exception("Mismatched incidence angles")
+
+    full_data = RtmDailyData(
+        hourly[0].lats,
+        hourly[0].lons,
+        np.concatenate([data.time for data in hourly]),
+        hourly[0].frequency,
+        hourly[0].incidence,
+        np.concatenate([data.columnar_water_vapor for data in hourly], axis=0),
+        np.concatenate([data.columnar_cloud_liquid for data in hourly], axis=0),
+        np.concatenate([data.transmissivity for data in hourly], axis=0),
+        np.concatenate([data.tb_up for data in hourly], axis=0),
+        np.concatenate([data.tb_down for data in hourly], axis=0),
     )
 
+    return full_data
+
+
+def run_rtm(era5_data: era5.Era5DailyData, verbose: bool = False) -> RtmDailyData:
+    """Run the RTM on ERA5 daily data."""
     if verbose:
         print("Running RTM over all data")
 
@@ -233,7 +254,7 @@ def convert(
     tb_up = np.reshape(atmo_results.tb_up, (num_time, num_lat, num_lon, num_freq))
     tb_down = np.reshape(atmo_results.tb_down, (num_time, num_lat, num_lon, num_freq))
 
-    rtm_data = RtmDailyData(
+    return RtmDailyData(
         era5_data.lats,
         era5_data.lons,
         era5_data.time,
@@ -245,6 +266,40 @@ def convert(
         tb_up,
         tb_down,
     )
+
+
+def convert_all(
+    era5_surface_input: Path,
+    era5_levels_input: Path,
+    rtm_output: Path,
+    time_indices: Optional[Sequence[int]],
+    one_pass: bool,
+    verbose: bool = False,
+) -> None:
+    """Read the ERA5 profile/surface files and run the RTM and write its output."""
+    all_time_indices: Sequence[int] | list[int]
+    if time_indices is None:
+        all_time_indices = era5.read_time_indices(era5_surface_input, era5_levels_input)
+    else:
+        all_time_indices = time_indices
+
+    if one_pass:
+        era5_data = era5.read_era5_data(
+            era5_surface_input, era5_levels_input, all_time_indices, verbose=verbose
+        )
+        rtm_data = run_rtm(era5_data, verbose)
+    else:
+        # Read the ERA5 data one hour at a time and process just that much
+        hourly_rtm_data = []
+        for time_index in all_time_indices:
+            era5_data = era5.read_era5_data(
+                era5_surface_input, era5_levels_input, [time_index], verbose=verbose
+            )
+            hourly_rtm_data.append(run_rtm(era5_data, verbose))
+
+        # Accumulate all the hourly data together
+        rtm_data = combine_rtm(hourly_rtm_data)
+
     if verbose:
         print(f"Writing output data: {rtm_output}")
     write_rtm_data(rtm_data, rtm_output)
@@ -265,9 +320,27 @@ if __name__ == "__main__":
         type=int,
         help="Time index to use in the ERA5 data, can be specified multiple times",
     )
+    parser.add_argument(
+        "--one-pass",
+        action="store_true",
+        help=(
+            "Read all ERA5 time indices at once instead of iterating over them. "
+            "This reduces the time to complete at the cost of "
+            "increased memory consumption."
+        ),
+    )
     args = parser.parse_args()
 
     print(f"ERA5 surface file: {args.era5_surface}")
     print(f"ERA5 levels file: {args.era5_levels}")
     print(f"RTM output file: {args.rtm_out}")
-    convert(args.era5_surface, args.era5_levels, args.rtm_out, args.time, verbose=True)
+    if args.one_pass:
+        print("One-pass mode enabled")
+    convert_all(
+        args.era5_surface,
+        args.era5_levels,
+        args.rtm_out,
+        args.time,
+        args.one_pass,
+        verbose=True,
+    )
