@@ -10,10 +10,11 @@ python -m access_atmosphere.process \
 
 import argparse
 import sys
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter_ns
-from typing import NamedTuple, Optional, Sequence
+from typing import Optional, Sequence
 
 import numpy as np
 from netCDF4 import Dataset, getlibversion, num2date
@@ -32,7 +33,8 @@ REF_EIA: NDArray[np.float32] = np.array(
 )
 
 
-class RtmDailyData(NamedTuple):
+@dataclass
+class RtmDailyData:
     """Output values after computing the atmospheric RTM.
 
     This is for a full day of data, so it is more "full" than should normally be
@@ -74,116 +76,125 @@ class RtmDailyData(NamedTuple):
     # lats, lons, freq).
     tb_down: NDArray[np.float32]
 
+    def write_nc(self, rtm_output: Path) -> None:
+        """Write the daily RTM data to a netCDF output file."""
+        timestamp = datetime.now(timezone.utc).isoformat(" ", "seconds")
+        nc_version = getlibversion().partition(" ")[0]
 
-def write_rtm_data(rtm_data: RtmDailyData, rtm_output: Path) -> None:
-    """Write the daily RTM data to a netCDF output file."""
-    timestamp = datetime.now(timezone.utc).isoformat(" ", "seconds")
-    nc_version = getlibversion().partition(" ")[0]
+        time_units = "hours since 1900-01-01 00:00:00Z"
+        data_times = num2date(self.time, time_units)
+        time_start = min(data_times).isoformat(" ", "seconds")
+        time_end = max(data_times).isoformat(" ", "seconds")
 
-    time_units = "hours since 1900-01-01 00:00:00Z"
-    data_times = num2date(rtm_data.time, time_units)
-    time_start = min(data_times).isoformat(" ", "seconds")
-    time_end = max(data_times).isoformat(" ", "seconds")
+        with Dataset(rtm_output, "w") as f:
+            # ----------
+            # Global attributes
+            f.setncattr_string("Conventions", "CF-1.9,ACDD-1.3")
+            f.setncattr_string("title", "ACCESS RTM output")
+            f.setncattr_string("institution", "REMSS")
+            f.setncattr_string(
+                "history", f"{timestamp} created: {' '.join(sys.argv[1:])}"
+            )
+            f.setncattr_string("netcdf_version_id", nc_version)
+            f.setncattr_string("date_created", timestamp)
+            f.setncattr_string("creator_name", "Remote Sensing Systems")
+            f.setncattr_string("creator_email", "support@remss.com")
+            f.setncattr_string("creator_url", "http://www.remss.com")
+            f.setncattr("geospatial_lat_min", np.float32(-90.0))
+            f.setncattr("geospatial_lat_max", np.float32(90.0))
+            f.setncattr("geospatial_lon_min", np.float32(0.0))
+            f.setncattr("geospatial_lon_max", np.float32(360.0))
+            f.setncattr_string("time_coverage_start", time_start)
+            f.setncattr_string("time_coverage_end", time_end)
+            f.setncattr_string("standard_name_vocabulary", "CF Standard Name Table v78")
 
-    with Dataset(rtm_output, "w") as f:
-        # ----------
-        # Global attributes
-        f.setncattr_string("Conventions", "CF-1.9,ACDD-1.3")
-        f.setncattr_string("title", "ACCESS RTM output")
-        f.setncattr_string("institution", "REMSS")
-        f.setncattr_string("history", f"{timestamp} created: {' '.join(sys.argv[1:])}")
-        f.setncattr_string("netcdf_version_id", nc_version)
-        f.setncattr_string("date_created", timestamp)
-        f.setncattr_string("creator_name", "Remote Sensing Systems")
-        f.setncattr_string("creator_email", "support@remss.com")
-        f.setncattr_string("creator_url", "http://www.remss.com")
-        f.setncattr("geospatial_lat_min", np.float32(-90.0))
-        f.setncattr("geospatial_lat_max", np.float32(90.0))
-        f.setncattr("geospatial_lon_min", np.float32(0.0))
-        f.setncattr("geospatial_lon_max", np.float32(360.0))
-        f.setncattr_string("time_coverage_start", time_start)
-        f.setncattr_string("time_coverage_end", time_end)
-        f.setncattr_string("standard_name_vocabulary", "CF Standard Name Table v78")
+            # ----------
+            # Dimensions
+            f.createDimension("time", len(self.time))
+            f.createDimension("lat", len(self.lats))
+            f.createDimension("lon", len(self.lons))
+            f.createDimension("freq", len(self.frequency))
 
-        # ----------
-        # Dimensions
-        f.createDimension("time", len(rtm_data.time))
-        f.createDimension("lat", len(rtm_data.lats))
-        f.createDimension("lon", len(rtm_data.lons))
-        f.createDimension("freq", len(rtm_data.frequency))
+            # ----------
+            # Coordinate variables
+            v = f.createVariable("time", np.int32, ("time",))
+            v[:] = self.time
+            v.setncattr_string("standard_name", "time")
+            v.setncattr_string("axis", "T")
+            v.setncattr_string("units", time_units)
 
-        # ----------
-        # Coordinate variables
-        v = f.createVariable("time", np.int32, ("time",))
-        v[:] = rtm_data.time
-        v.setncattr_string("standard_name", "time")
-        v.setncattr_string("axis", "T")
-        v.setncattr_string("units", time_units)
+            v = f.createVariable("lat", np.float32, ("lat",))
+            v[:] = self.lats
+            v.setncattr_string("standard_name", "latitude")
+            v.setncattr_string("axis", "Y")
+            v.setncattr_string("units", "degrees_north")
 
-        v = f.createVariable("lat", np.float32, ("lat",))
-        v[:] = rtm_data.lats
-        v.setncattr_string("standard_name", "latitude")
-        v.setncattr_string("axis", "Y")
-        v.setncattr_string("units", "degrees_north")
+            v = f.createVariable("lon", np.float32, ("lon",))
+            v[:] = self.lons
+            v.setncattr_string("standard_name", "longitude")
+            v.setncattr_string("axis", "X")
+            v.setncattr_string("units", "degrees_east")
 
-        v = f.createVariable("lon", np.float32, ("lon",))
-        v[:] = rtm_data.lons
-        v.setncattr_string("standard_name", "longitude")
-        v.setncattr_string("axis", "X")
-        v.setncattr_string("units", "degrees_east")
+            v = f.createVariable("freq", np.float32, ("freq",))
+            v[:] = self.frequency
+            v.setncattr_string(
+                "standard_name", "sensor_band_central_radiation_frequency"
+            )
+            v.setncattr_string("long_name", "frequency")
+            v.setncattr_string("units", "GHz")
 
-        v = f.createVariable("freq", np.float32, ("freq",))
-        v[:] = rtm_data.frequency
-        v.setncattr_string("standard_name", "sensor_band_central_radiation_frequency")
-        v.setncattr_string("long_name", "frequency")
-        v.setncattr_string("units", "GHz")
+            v = f.createVariable("eia", np.float32, ("freq",))
+            v[:] = self.incidence
+            v.setncattr_string("standard_name", "sensor_zenith_angle")
+            v.setncattr_string("long_name", "incidence angle")
+            v.setncattr_string("units", "degree")
 
-        v = f.createVariable("eia", np.float32, ("freq",))
-        v[:] = rtm_data.incidence
-        v.setncattr_string("standard_name", "sensor_zenith_angle")
-        v.setncattr_string("long_name", "incidence angle")
-        v.setncattr_string("units", "degree")
+            # ----------
+            # Variables
+            v = f.createVariable(
+                "col_vapor", np.float32, ("time", "lat", "lon"), zlib=True
+            )
+            v[...] = self.columnar_water_vapor
+            v.setncattr_string(
+                "standard_name", "atmosphere_mass_content_of_water_vapor"
+            )
+            v.setncattr_string("long_name", "columnar water vapor")
+            v.setncattr_string("units", "kg m-2")
+            v.setncattr_string("coordinates", "lat lon")
 
-        # ----------
-        # Variables
-        v = f.createVariable("col_vapor", np.float32, ("time", "lat", "lon"), zlib=True)
-        v[...] = rtm_data.columnar_water_vapor
-        v.setncattr_string("standard_name", "atmosphere_mass_content_of_water_vapor")
-        v.setncattr_string("long_name", "columnar water vapor")
-        v.setncattr_string("units", "kg m-2")
-        v.setncattr_string("coordinates", "lat lon")
+            v = f.createVariable(
+                "col_water", np.float32, ("time", "lat", "lon"), zlib=True
+            )
+            v[...] = self.columnar_cloud_liquid
+            v.setncattr_string(
+                "standard_name", "atmosphere_mass_content_of_cloud_liquid_water"
+            )
+            v.setncattr_string("long_name", "columnar liquid cloud content")
+            v.setncattr_string("units", "kg m-2")
+            v.setncattr_string("coordinates", "lat lon")
 
-        v = f.createVariable("col_water", np.float32, ("time", "lat", "lon"), zlib=True)
-        v[...] = rtm_data.columnar_cloud_liquid
-        v.setncattr_string(
-            "standard_name", "atmosphere_mass_content_of_cloud_liquid_water"
-        )
-        v.setncattr_string("long_name", "columnar liquid cloud content")
-        v.setncattr_string("units", "kg m-2")
-        v.setncattr_string("coordinates", "lat lon")
+            v = f.createVariable(
+                "tran", np.float32, ("time", "lat", "lon", "freq"), zlib=True
+            )
+            v[...] = self.transmissivity
+            v.setncattr_string("long_name", "atmospheric transmissivity")
+            v.setncattr_string("coordinates", "lat lon")
 
-        v = f.createVariable(
-            "tran", np.float32, ("time", "lat", "lon", "freq"), zlib=True
-        )
-        v[...] = rtm_data.transmissivity
-        v.setncattr_string("long_name", "atmospheric transmissivity")
-        v.setncattr_string("coordinates", "lat lon")
+            v = f.createVariable(
+                "tb_up", np.float32, ("time", "lat", "lon", "freq"), zlib=True
+            )
+            v[...] = self.tb_up
+            v.setncattr_string("long_name", "upwelling brightness temperature")
+            v.setncattr_string("units", "kelvin")
+            v.setncattr_string("coordinates", "lat lon")
 
-        v = f.createVariable(
-            "tb_up", np.float32, ("time", "lat", "lon", "freq"), zlib=True
-        )
-        v[...] = rtm_data.tb_up
-        v.setncattr_string("long_name", "upwelling brightness temperature")
-        v.setncattr_string("units", "kelvin")
-        v.setncattr_string("coordinates", "lat lon")
-
-        v = f.createVariable(
-            "tb_down", np.float32, ("time", "lat", "lon", "freq"), zlib=True
-        )
-        v[...] = rtm_data.tb_down
-        v.setncattr_string("long_name", "downwelling brightness temperature")
-        v.setncattr_string("units", "kelvin")
-        v.setncattr_string("coordinates", "lat lon")
+            v = f.createVariable(
+                "tb_down", np.float32, ("time", "lat", "lon", "freq"), zlib=True
+            )
+            v[...] = self.tb_down
+            v.setncattr_string("long_name", "downwelling brightness temperature")
+            v.setncattr_string("units", "kelvin")
+            v.setncattr_string("coordinates", "lat lon")
 
 
 def combine_rtm(hourly: Sequence[RtmDailyData]) -> RtmDailyData:
@@ -302,7 +313,7 @@ def convert_all(
 
     if verbose:
         print(f"Writing output data: {rtm_output}")
-    write_rtm_data(rtm_data, rtm_output)
+    rtm_data.write_nc(rtm_output)
 
 
 if __name__ == "__main__":
