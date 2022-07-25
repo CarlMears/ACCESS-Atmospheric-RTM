@@ -75,10 +75,9 @@ lint:
   before_script:
     - python --version
     - pip install --upgrade pip
-    - pip install tox
+    - pip install nox
   script:
-    - tox -l
-    - tox -e black,flake8,mypy
+    - nox -s black flake8 mypy_full
   artifacts:
     paths:
       - mypy.junit.xml
