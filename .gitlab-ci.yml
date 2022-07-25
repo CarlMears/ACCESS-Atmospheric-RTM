@@ -43,7 +43,7 @@ build-manylinux2014:
   needs: [build-linux]
   parallel:
     matrix:
-      - PYABI: [cp37-cp37m, cp38-cp38, cp39-cp39, cp310-cp310]
+      - PYABI: [cp38-cp38, cp39-cp39, cp310-cp310]
   script:
     - /opt/python/$PYABI/bin/python -m build
     - auditwheel repair -w dist/ ./dist/access_atmosphere-*-$PYABI-linux_x86_64.whl
