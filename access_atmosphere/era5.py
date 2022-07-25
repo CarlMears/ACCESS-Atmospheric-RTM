@@ -98,16 +98,20 @@ def read_era5_data(
         times = slice(None)
     else:
         times = time_subset
+
+    # The non-coordinate variables are all stored as packed integers and
+    # automatically unpacked to float64. To reduce peak memory usage, each one
+    # is converted to a float32 array.
     with Dataset(surface_file, "r") as f:
         lats = f["latitude"][:]
         lons = f["longitude"][:]
         time = f["time"][times]
-        surface_pressure = f["sp"][times, :, :]
-        surface_temperature = f["t2m"][times, :, :]
-        surface_dewpoint = f["d2m"][times, :, :]
-        surface_height = f["z"][times, :, :]
-        columnar_water_vapor = f["tcwv"][times, :, :]
-        columnar_cloud_liquid = f["tclw"][times, :, :]
+        surface_pressure = f["sp"][times, :, :].astype(np.float32)
+        surface_temperature = f["t2m"][times, :, :].astype(np.float32)
+        surface_dewpoint = f["d2m"][times, :, :].astype(np.float32)
+        surface_height = f["z"][times, :, :].astype(np.float32)
+        columnar_water_vapor = f["tcwv"][times, :, :].astype(np.float32)
+        columnar_cloud_liquid = f["tclw"][times, :, :].astype(np.float32)
 
     if verbose:
         print(f"Reading profiles data: {levels_file}")
@@ -115,11 +119,11 @@ def read_era5_data(
         # TODO: Probably the lats/lons/time coordinate variables should be
         # checked to ensure the levels file matches the surface file...but for
         # now we'll just be really trusting
-        levels = f["level"][:]
-        temperature = f["t"][times, :, :, :]
-        specific_humidity = f["q"][times, :, :, :]
-        height = f["z"][times, :, :, :]
-        liquid_content = f["clwc"][times, :, :, :]
+        levels = f["level"][:].astype(np.float32)
+        temperature = f["t"][times, :, :, :].astype(np.float32)
+        specific_humidity = f["q"][times, :, :, :].astype(np.float32)
+        height = f["z"][times, :, :, :].astype(np.float32)
+        liquid_content = f["clwc"][times, :, :, :].astype(np.float32)
 
     if verbose:
         print(f"Post-processing ERA5 data ({len(levels)} pressure levels)")
@@ -127,7 +131,7 @@ def read_era5_data(
     # By default, netCDF4 returns masked arrays for all the variables above.
     # However, there shouldn't be any values that are actually masked in the
     # ERA5 data. Check that assumption and then convert everything to "vanilla"
-    # ndarrays and also cast the float64 values to float32 values.
+    # ndarrays.
     if any(
         np.ma.count_masked(a) > 0
         for a in (
@@ -151,17 +155,17 @@ def read_era5_data(
     lats = np.ma.getdata(lats)
     lons = np.ma.getdata(lons)
     time = np.ma.getdata(time)
-    surface_pressure = np.ma.getdata(surface_pressure).astype(np.float32)
-    surface_temperature = np.ma.getdata(surface_temperature).astype(np.float32)
-    surface_dewpoint = np.ma.getdata(surface_dewpoint).astype(np.float32)
-    surface_height = np.ma.getdata(surface_height).astype(np.float32)
-    columnar_water_vapor = np.ma.getdata(columnar_water_vapor).astype(np.float32)
-    columnar_cloud_liquid = np.ma.getdata(columnar_cloud_liquid).astype(np.float32)
-    levels = np.ma.getdata(levels).astype(np.float32)
-    temperature = np.ma.getdata(temperature).astype(np.float32)
-    specific_humidity = np.ma.getdata(specific_humidity).astype(np.float32)
-    height = np.ma.getdata(height).astype(np.float32)
-    liquid_content = np.ma.getdata(liquid_content).astype(np.float32)
+    surface_pressure = np.ma.getdata(surface_pressure)
+    surface_temperature = np.ma.getdata(surface_temperature)
+    surface_dewpoint = np.ma.getdata(surface_dewpoint)
+    surface_height = np.ma.getdata(surface_height)
+    columnar_water_vapor = np.ma.getdata(columnar_water_vapor)
+    columnar_cloud_liquid = np.ma.getdata(columnar_cloud_liquid)
+    levels = np.ma.getdata(levels)
+    temperature = np.ma.getdata(temperature)
+    specific_humidity = np.ma.getdata(specific_humidity)
+    height = np.ma.getdata(height)
+    liquid_content = np.ma.getdata(liquid_content)
 
     # The reciprocal of the standard gravity, in units of s^2 / m
     # https://en.wikipedia.org/wiki/Standard_gravity
