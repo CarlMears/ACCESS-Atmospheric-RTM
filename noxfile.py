@@ -27,7 +27,6 @@ def mypy(session: nox.Session) -> None:
     session.run(
         "mypy",
         "--pretty",
-        "--ignore-missing-imports",
         "--show-error-context",
         "access_atmosphere/",
     )
@@ -40,7 +39,6 @@ def mypy_full(session: nox.Session) -> None:
     session.run(
         "mypy",
         "--pretty",
-        "--ignore-missing-imports",
         "--show-error-context",
         "--junit-xml=mypy.junit.xml",
         "--cobertura-xml-report=.",
