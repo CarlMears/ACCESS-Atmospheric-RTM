@@ -1,0 +1,35 @@
+[build-system]
+build-backend = "maturin"
+requires = ["maturin>=0.13,<0.14"]
+
+[project]
+name = "access-atmospheric-rtm"
+requires-python = ">=3.8"
+
+dependencies = [
+  "cdsapi",
+  "netCDF4",
+  "numpy",
+]
+
+authors = [
+  {name = "Richard Lindsley", email = "lindsley@remss.com"},
+]
+classifiers = [
+  "Programming Language :: Rust",
+  "Programming Language :: Python :: Implementation :: CPython",
+]
+
+[project.urls]
+repository = "http://gitlab.remss.com/access/atmospheric-rtm"
+
+[tool.isort]
+profile = "black"
+
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
+module = "netCDF4"
+
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
+module = "cdsapi"

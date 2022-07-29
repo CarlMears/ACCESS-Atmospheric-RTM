@@ -1,0 +1,24 @@
+[package]
+edition = "2021"
+name = "access-atmospheric-rtm"
+version = "0.3.0-alpha.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+crate-type = ["cdylib"]
+name = "access_atmospheric_rtm"
+
+[dependencies]
+ndarray = "0.15.4"
+numpy = "0.16.2"
+pyo3 = {version = "0.16.5", features = ["extension-module"]}
+
+[features]
+abi3 = ["pyo3/abi3-py38", "generate-import-lib"]
+generate-import-lib = ["pyo3/generate-import-lib"]
+
+[package.metadata.maturin]
+python-source = "python"
+
+[profile.dev]
+opt-level = 1
