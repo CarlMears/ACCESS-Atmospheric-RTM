@@ -9,7 +9,7 @@ def black(session: nox.Session) -> None:
     """Check if black needs to be run"""
     session.install("black")
     session.run(
-        "black", "--check", "--target-version=py38", "--diff", "access_atmosphere/"
+        "black", "--check", "--target-version=py38", "--diff", "python/"
     )
 
 
@@ -17,7 +17,7 @@ def black(session: nox.Session) -> None:
 def flake8(session: nox.Session) -> None:
     """Run flake8"""
     session.install("flake8", "flake8-docstrings", "flake8-import-order")
-    session.run("flake8", "--count", "access_atmosphere/")
+    session.run("flake8", "--count", "python/")
 
 
 @nox.session
@@ -28,7 +28,7 @@ def mypy(session: nox.Session) -> None:
         "mypy",
         "--pretty",
         "--show-error-context",
-        "access_atmosphere/",
+        "python/",
     )
 
 
@@ -43,5 +43,5 @@ def mypy_full(session: nox.Session) -> None:
         "--junit-xml=mypy.junit.xml",
         "--cobertura-xml-report=.",
         "--lineprecision-report=.",
-        "access_atmosphere/",
+        "python/",
     )
