@@ -1,0 +1,152 @@
+include:
+  - template: Security/SAST.gitlab-ci.yml
+  - template: Security/Secret-Detection.gitlab-ci.yml
+
+lint:
+  stage: test
+  needs: []
+  image: "python:3.8-slim"
+  before_script:
+    - python --version
+    - pip install --upgrade pip
+    - pip install nox
+  script:
+    - nox -s black flake8
+
+mypy:
+  stage: test
+  needs: []
+  allow_failure: true
+  image: "python:3.8-slim"
+  before_script:
+    - python --version
+    - pip install --upgrade pip
+    - pip install nox
+  script:
+    - nox -s mypy_full
+  artifacts:
+    paths:
+      - mypy.junit.xml
+      - cobertura.xml
+      - lineprecision.txt
+    reports:
+      junit: mypy.junit.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: cobertura.xml
+    when: always
+
+stubtest:
+  stage: test
+  needs: [build-manylinux]
+  image: "python:3.8-slim"
+  before_script:
+    - python --version
+    - pip install --upgrade pip
+    - pip install nox
+  script:
+    - nox -s stubtest -- access_atmosphere-*-cp38-cp38-*.whl
+
+rust-tests:
+  stage: test
+  needs: []
+  image: rust:1.57-bullseye
+  variables:
+    CARGO_INCREMENTAL: "0"
+  script:
+    - cargo test --locked
+
+build-manylinux:
+  stage: build
+  image: "ghcr.io/pyo3/maturin:latest"
+  variables:
+    CARGO_INCREMENTAL: "0"
+  script:
+    - maturin sdist
+    - maturin build --release --features abi3
+    - maturin build --release -i "python3.8" -i "python3.9" -i "python3.10"
+    - cp -t . target/wheels/*.tar.gz target/wheels/*.whl
+  artifacts:
+    paths:
+      - "*.tar.gz"
+      - "*.whl"
+
+build-windows:
+  stage: build
+  image: rust:1.57-bullseye
+  variables:
+    CARGO_INCREMENTAL: "0"
+  before_script:
+    - echo -e "section_start:$(date +%s):apt-get\r\e[0KInstalling dependencies"
+    - export LANG="C.UTF-8"
+    - apt-get --quiet update
+    - apt-get --quiet --yes --no-install-recommends install python3-venv gcc-mingw-w64-x86-64
+    - python3 -m venv --upgrade-deps venv
+    - source ./venv/bin/activate
+    - pip install maturin
+    - rustup target add x86_64-pc-windows-gnu
+    - echo -e "section_end:$(date +%s):apt-get\r\e[0K"
+    - rustc --version && python3 --version
+  script:
+    - maturin build --release --target x86_64-pc-windows-gnu --features abi3
+    - cp -t . target/wheels/*.whl
+  artifacts:
+    paths:
+      - "*.whl"
+
+import-linux:
+  stage: test
+  image: python:3.10-slim
+  needs: [build-manylinux]
+  before_script:
+    - python --version
+    - pip install --upgrade pip
+  script:
+    - pip install --progress-bar=off ./access_atmosphere-*-cp310-cp310-*.whl
+    - python -c 'import access_atmosphere'
+
+publish-package:
+  stage: deploy
+  image: python:3.10-slim
+  needs: ["build-windows", "build-manylinux"]
+  # Once a package version is uploaded to a PyPI registry, it cannot be updated.
+  # So to ensure no conflicts, only tagged releases are published.
+  only:
+    - tags
+  before_script:
+    - python --version
+    - pip install --upgrade pip
+    - pip install twine
+  script:
+    - >
+      TWINE_USERNAME=gitlab-ci-token
+      TWINE_PASSWORD=${CI_JOB_TOKEN}
+      python -m twine upload
+      --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi
+      *.tar.gz *manylinux*.whl *win*.whl
+
+api-documentation:
+  stage: test
+  needs: [build-manylinux]
+  image: "python:3.8-slim"
+  before_script:
+    - python --version
+    - pip install --upgrade pip
+    - pip install nox
+  script:
+    - nox -s pdoc -- access_atmosphere-*-cp38-cp38-*.whl
+  artifacts:
+    paths:
+      - public
+
+pages:
+  stage: deploy
+  needs: [api-documentation]
+  rules:
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
+  image: "python:3.8-slim"
+  script:
+    - echo "deploying documentation"
+  artifacts:
+    paths:
+      - public
