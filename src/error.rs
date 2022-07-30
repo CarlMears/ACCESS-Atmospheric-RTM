@@ -5,6 +5,8 @@ pub enum RtmError {
     InconsistentInputs,
     /// Couldn't find the surface index
     NoSurface,
+    /// An array is not contiguous when it was assumed to be
+    NotContiguous,
 }
 
 impl std::fmt::Display for RtmError {
@@ -16,6 +18,7 @@ impl std::fmt::Display for RtmError {
             RtmError::NoSurface => {
                 write!(f, "couldn't find the surface index")
             }
+            RtmError::NotContiguous => write!(f, "array slice not contiguous in memory"),
         }
     }
 }
