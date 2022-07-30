@@ -14,13 +14,16 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter_ns
-from typing import Optional, Sequence
+from typing import List, Optional, Sequence, Union
 
 import numpy as np
 from netCDF4 import Dataset, getlibversion, num2date
 from numpy.typing import NDArray
 
 from . import era5, rtm
+
+# TODO(Python 3.9): once Python 3.9 is the minimum supported version, switch to
+# the builtin list instead of typing.List
 
 # Reference frequencies (in GHz) to use
 REF_FREQ: NDArray[np.float32] = np.array(
@@ -288,7 +291,7 @@ def convert_all(
     verbose: bool = False,
 ) -> None:
     """Read the ERA5 profile/surface files and run the RTM and write its output."""
-    all_time_indices: Sequence[int] | list[int]
+    all_time_indices: Union[Sequence[int], List[int]]
     if time_indices is None:
         all_time_indices = era5.read_time_indices(era5_surface_input, era5_levels_input)
     else:

@@ -1,11 +1,14 @@
 """Read ERA5 daily surface and profile data."""
 
 from pathlib import Path
-from typing import NamedTuple, Optional, Sequence, Union, cast
+from typing import List, NamedTuple, Optional, Sequence, Union, cast
 
 import numpy as np
 from netCDF4 import Dataset
 from numpy.typing import NDArray
+
+# TODO(Python 3.9): once Python 3.9 is the minimum supported version, switch to
+# the builtin list instead of typing.List
 
 
 class Era5DailyData(NamedTuple):
@@ -78,7 +81,7 @@ def buck_vap(temperature: NDArray[np.float32]) -> NDArray[np.float32]:
     )
 
 
-def read_time_indices(surface_file: Path, levels_file: Path) -> list[int]:
+def read_time_indices(surface_file: Path, levels_file: Path) -> List[int]:
     """Return the available time indices in the two ERA5 files."""
     with Dataset(surface_file, "r") as f:
         surface_times = f["time"][:]
