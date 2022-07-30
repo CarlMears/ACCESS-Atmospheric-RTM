@@ -10,6 +10,7 @@ name = "access_atmosphere"
 
 [dependencies]
 ndarray = "0.15.4"
+num-complex = "0.4.2"
 numpy = "0.16.2"
 pyo3 = {version = "0.16.5", features = ["extension-module"]}
 
