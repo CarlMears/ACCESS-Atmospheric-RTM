@@ -4,10 +4,26 @@
 //! real work happens in the other modules, and they do not use `pyo3`, it's
 //! only used here.
 
+use error::RtmError;
 use pyo3::prelude::*;
 
-use ndarray::Array2;
-use numpy::{PyArray2, PyReadonlyArray2, PyReadonlyArray1, ToPyArray};
+use ndarray::{Array2, Axis};
+use numpy::{PyArray2, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
+use rtm::{RtmInputs, RtmParameters};
+
+pub(crate) mod error;
+pub(crate) mod rtm;
+
+impl From<RtmError> for PyErr {
+    fn from(e: RtmError) -> Self {
+        use pyo3::exceptions::PyValueError;
+
+        match e {
+            RtmError::InconsistentInputs => PyValueError::new_err(e.to_string()),
+            RtmError::NoSurface => PyValueError::new_err(e.to_string()),
+        }
+    }
+}
 
 /// Atmospheric parameters.
 ///
@@ -67,8 +83,63 @@ fn compute_rtm(
     num_points: usize,
     num_freq: usize,
 ) -> PyResult<AtmoParameters> {
-    // TODO: implement
-    let output = AtmoParameters::new(num_points, num_freq);
+    let parameters = RtmParameters::new(frequency.as_slice()?, incidence_angle.as_slice()?)?;
+    if parameters.len() != num_freq || pressure.len() != num_levels {
+        return Err(RtmError::InconsistentInputs.into());
+    }
+
+    // Ensure everything is converted and contiguous
+    let pressure = pressure.as_slice()?;
+    let temperature = temperature.as_array();
+    let height = height.as_array();
+    let specific_humidity = specific_humidity.as_array();
+    let liquid_content = liquid_content.as_array();
+    let surface_temperature = surface_temperature.as_slice()?;
+    let surface_height = surface_height.as_slice()?;
+    let surface_dewpoint = surface_dewpoint.as_slice()?;
+    let surface_pressure = surface_pressure.as_slice()?;
+
+    let mut output = AtmoParameters::new(num_points, num_freq);
+
+    for point in 0..num_points {
+        let rtm_input = RtmInputs::new(
+            &pressure,
+            surface_temperature[point],
+            temperature
+                .index_axis(Axis(0), point)
+                .as_slice()
+                .ok_or(numpy::NotContiguousError)?,
+            surface_height[point],
+            height
+                .index_axis(Axis(0), point)
+                .as_slice()
+                .ok_or(numpy::NotContiguousError)?,
+            surface_dewpoint[point],
+            specific_humidity
+                .index_axis(Axis(0), point)
+                .as_slice()
+                .ok_or(numpy::NotContiguousError)?,
+            liquid_content
+                .index_axis(Axis(0), point)
+                .as_slice()
+                .ok_or(numpy::NotContiguousError)?,
+            surface_pressure[point],
+        )?;
+
+        // TODO: remove later
+        if point == 0 {
+            dbg!(rtm_input);
+        }
+
+        // let output_point = rtm_input.run(&parameters)?;
+
+        // TODO: update output
+        // output
+    }
+
+    // TODO: remove later
+    dbg!(parameters);
+
     Ok(output)
 }
 
