@@ -10,39 +10,72 @@ tasks:
 - Download relevant ERA5 data
 - Compute atmospheric RTM based on the ERA5 data
 
-The RTM is implemented in Fortran and compiled using `f2py` into a Python extension.
+The RTM is implemented in Rust and compiled into a Python extension using
+[maturin](https://maturin.rs/) and [pyo3](https://pyo3.rs/).
+
+Following the [NumPy policy of supported Python
+versions](https://numpy.org/neps/nep-0029-deprecation_policy.html#drop-schedule),
+Python 3.8 is the minimum version supported.
 
 ## Building
 
-Assuming a Fortran compiler is available, the package can be built using
-[build](https://github.com/pypa/build). Starting from a scratch in a new
-[virtual environment](https://docs.python.org/3/library/venv.html):
+To build the package locally, both [Python](https://www.python.org/) and
+[Rust](https://www.python.org/) are required. Rust can be installed using using
+[`rustup`](https://rustup.rs/). [Maturin](https://maturin.rs/) is used to build
+everything.
+
+On Linux:
 
 ```bash
+# Install maturin in a virtual environment
 python3 -m venv --upgrade-deps .venv
-.venv/bin/pip install build
-.venv/bin/python -m build
+source .venv/bin/activate
+pip install maturin
+
+# Build the wheel
+maturin build --release
+# The wheel is in target/wheels/ and can be installed using "pip install"
+
+# For local development, the wheel can be built and installed in the current venv
+maturin develop
 ```
 
-This creates a source distribution as `dist/access-atmosphere-$VERSION.tar.gz`
-and a wheel as `dist/access-atmosphere-$VERSION-*.whl`. (The extra information
-at the end of the filename contains the Python version and platform
-information.) Either file (sdist or wheel) can be used to install the package,
-but note that a big benefit for the wheel is that it's ready to go and no
-Fortran compiler is needed.
+On Windows (noting that `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
+-Scope CurrentUser` is run first, as mentioned in the [venv
+documentation](https://docs.python.org/3/library/venv.html)):
 
-To install the wheel in a new venv and download the dependencies from PyPI:
+```powershell
+py.exe -m venv --upgrade-deps venv
+.\venv\Scripts\Activate.ps1
+pip install maturin
 
-```bash
-python3 -m venv --upgrade-deps .venv
-.venv/bin/pip install access-atmosphere-$VERSION-*.whl
+# Build the wheel. The "abi3" feature is used to avoid looking for the Python
+# development libraries since they're bundled in this way.
+maturin build --release --features abi3
+
+# For local development, building and installing the wheel in the venv
+maturin develop --features abi3
 ```
 
-Alternately, Gitlab CI jobs are set up to build
-[manylinux](https://github.com/pypa/manylinux) wheels for multiple versions of
-Python. The wheels can be downloaded as CI job artifacts, and for every release,
-are generated and saved in the [local package
+Alternately, the GitLab CI automatically builds wheels. The built wheels are:
+
+- x86_64 [manylinux](https://github.com/pypa/manylinux) wheels specifically for
+  Python versions 3.8 through 3.10
+- x86_64 manylinux abi3 wheel for Python 3.8 and later
+- x86_64 Windows abi3 wheel for Python 3.8 and later
+
+The wheels can be downloaded as CI job artifacts, and for every release, are
+generated and saved in the [local package
 registry](http://gitlab.remss.com/access/atmospheric-rtm/-/packages).
+
+Note that with a wheel built, it's ready to install without needed a local Rust
+compiler. To install the wheel in a new venv and download the dependencies from
+PyPI:
+
+```bash
+python3 -m venv --upgrade-deps .venv
+.venv/bin/pip install access-atmosphere-*.whl
+```
 
 As another option, a [`Dockerfile`](Dockerfile) is provided. Build it with
 `docker` or `podman`:
@@ -50,10 +83,6 @@ As another option, a [`Dockerfile`](Dockerfile) is provided. Build it with
 ```bash
 podman build -t access_atmosphere -f Dockerfile
 ```
-
-Following the [NumPy policy of supported Python
-versions](https://numpy.org/neps/nep-0029-deprecation_policy.html#drop-schedule),
-Python 3.8 is the minimum version supported.
 
 ## Running
 
@@ -94,6 +123,9 @@ python -m access_atmosphere.process \
     access_era5_2020-01-01.nc
 ```
 
+<!-- 
+# TODO: update this for however I expose the parallelism from Rust
+
 The Fortran code is compiled with [OpenMP](https://www.openmp.org/) in order to
 process each profile in parallel using a pool of worker threads. By default,
 this will be as many threads as there are logical CPUs detected on the machine.
@@ -102,4 +134,4 @@ instance, to set exactly 4 threads:
 
 ```bash
 env OMP_NUM_THREADS=4 python3 -m access_atmosphere.process ...
-```
+``` -->
