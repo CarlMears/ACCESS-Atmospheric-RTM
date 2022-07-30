@@ -21,30 +21,21 @@
 #
 # docker run -v $PWD:/data access-atmospheric-rtm:latest -m access_atmosphere.process /data/era5_surface.nc /data/era5_levels.nc /data/rtm_out.nc
 
-FROM docker.io/library/python:3.10 AS build
+FROM ghcr.io/pyo3/maturin:latest AS build
 
-RUN apt-get update && \
-    apt-get install -y gfortran
-RUN python3 -m venv --upgrade-deps /root/venv
-RUN /root/venv/bin/pip3 install build
-
-WORKDIR /root
 COPY . .
-
-RUN /root/venv/bin/python3 -m build
+RUN maturin build --release -i "python3.10"
 
 FROM docker.io/library/python:3.10-slim
 
-RUN apt-get update && \
-    apt-get install -y libgfortran5 libgomp1
 RUN python3 -m venv --upgrade-deps /root/venv
 
 WORKDIR /root
 COPY --from=build \
-    /root/dist/*.whl \
+    /io/target/wheels/*.whl \
     /root/
 
-RUN /root/venv/bin/pip3 install ./*.whl
+RUN /root/venv/bin/pip3 install ./access_atmosphere-*-cp310-cp310-manylinux*.whl
 ENTRYPOINT [ "/root/venv/bin/python3" ]
 
 ARG version
