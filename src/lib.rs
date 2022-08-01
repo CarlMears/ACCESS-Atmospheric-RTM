@@ -131,10 +131,11 @@ fn compute_rtm(
 
             // TODO: remove later
             if point == 0 {
-                dbg!(rtm_input);
+                dbg!(&rtm_input);
             }
 
-            // let output_point = rtm_input.run(&parameters)?;
+            let output_point = rtm_input.run(&parameters);
+            // output.tran;
 
             // TODO: update output
             // output
