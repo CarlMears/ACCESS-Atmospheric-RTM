@@ -8,7 +8,7 @@ pub(crate) mod error;
 pub(crate) mod rtm;
 
 use error::RtmError;
-use ndarray::{Array2, Axis};
+use ndarray::{Array1, Array2, Axis};
 use numpy::{PyArray2, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
 use pyo3::prelude::*;
 use rayon::prelude::*;
@@ -100,11 +100,11 @@ fn compute_rtm(
     let surface_dewpoint = surface_dewpoint.as_slice()?;
     let surface_pressure = surface_pressure.as_slice()?;
 
-    let output = AtmoParameters::new(num_points, num_freq);
+    let mut results = Vec::new();
 
     (0..num_points)
         .into_par_iter()
-        .try_for_each(|point| -> Result<(), RtmError> {
+        .map(|point| -> Result<_, RtmError> {
             let rtm_input = RtmInputs::new(
                 &pressure,
                 surface_temperature[point],
@@ -134,17 +134,35 @@ fn compute_rtm(
                 dbg!(&rtm_input);
             }
 
-            let output_point = rtm_input.run(&parameters);
-            // output.tran;
-
-            // TODO: update output
-            // output
-
-            Ok(())
-        })?;
+            Ok(rtm_input.run(&parameters))
+        })
+        .collect_into_vec(&mut results);
 
     // TODO: remove later
     dbg!(parameters);
+
+    // Copy the intermediate results to the output arrays
+    let mut output = AtmoParameters::new(num_points, num_freq);
+    results.into_iter().enumerate().try_for_each(
+        |(index, rtm_output)| -> Result<_, RtmError> {
+            let rtm::RtmOutputs {
+                tran,
+                tb_up,
+                tb_down,
+            } = rtm_output?;
+
+            let rhs = Array1::from_vec(tran);
+            output.tran.index_axis_mut(Axis(0), index).assign(&rhs);
+
+            let rhs = Array1::from_vec(tb_up);
+            output.tb_up.index_axis_mut(Axis(0), index).assign(&rhs);
+
+            let rhs = Array1::from_vec(tb_down);
+            output.tb_down.index_axis_mut(Axis(0), index).assign(&rhs);
+
+            Ok(())
+        },
+    )?;
 
     Ok(output)
 }

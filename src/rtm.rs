@@ -44,11 +44,11 @@ pub struct RtmInputs {
 #[derive(Debug)]
 pub struct RtmOutputs {
     /// Atmospheric transmissivity as a function of frequency index.
-    tran: Vec<f32>,
+    pub tran: Vec<f32>,
     /// Atmospheric upwelling in K as a function of frequency index.
-    tb_up: Vec<f32>,
+    pub tb_up: Vec<f32>,
     /// Atmospheric downwelling in K as a function of frequency index.
-    tb_down: Vec<f32>,
+    pub tb_down: Vec<f32>,
 }
 
 impl RtmParameters {
