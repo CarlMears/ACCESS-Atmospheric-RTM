@@ -296,20 +296,21 @@ pub(crate) fn atm_tran(inc: f32, t: &[f32], z: &[f32], tabs: &[f32]) -> (f32, f3
     // Differential slant height
     let dsdh = (1.0 + DELTA) / f32::sqrt(inc.to_radians().cos().powi(2) + DELTA * (2.0 + DELTA));
 
+    // Number of levels *not* including the surface
     let num_levels = t.len() - 1;
 
-    let opacity: Vec<_> = (1..num_levels)
+    let opacity: Vec<_> = (1..=num_levels)
         .into_iter()
         .map(|i| -dsdh * 0.5 * (tabs[i - 1] + tabs[i]) * (z[i] - z[i - 1]))
         .collect();
-    let t_avg: Vec<_> = (1..num_levels)
+    let t_avg: Vec<_> = (1..=num_levels)
         .into_iter()
-        .map(|i| 0.5 * (tabs[i - 1] + tabs[i]))
+        .map(|i| 0.5 * (t[i - 1] + t[i]))
         .collect();
     let ems: Vec<_> = opacity.iter().map(|opacity| 1.0 - opacity.exp()).collect();
 
     let (sum_down, _sum_op) =
-        (1..num_levels)
+        (1..=num_levels)
             .into_iter()
             .fold((0., 0.), |(sum_down, sum_op), i| {
                 (
@@ -319,7 +320,7 @@ pub(crate) fn atm_tran(inc: f32, t: &[f32], z: &[f32], tabs: &[f32]) -> (f32, f3
             });
 
     let (sum_up, sum_op) =
-        (1..num_levels)
+        (1..=num_levels)
             .into_iter()
             .rev()
             .fold((0., 0.), |(sum_up, sum_op), i| {

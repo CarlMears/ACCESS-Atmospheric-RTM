@@ -231,7 +231,7 @@ impl RtmInputs {
 
         for (&freq, &inc) in parameters.frequency.iter().zip(&parameters.incidence) {
             // Build up total absorption coefficient profile
-            let absorption_profile: Vec<_> = (self.surface_index..self.num_levels.get())
+            let absorption_profile: Vec<_> = (self.surface_index..self.num_levels.get() + 1)
                 .map(|level_index| {
                     // Water vapor and oxygen absorption coefficients at this level converted to Np/km
                     let oxygen = fdabsoxy_1992_modified(
