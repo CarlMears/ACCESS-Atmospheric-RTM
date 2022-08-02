@@ -130,17 +130,10 @@ fn compute_rtm(
                 surface_pressure[point],
             )?;
 
-            // TODO: remove later
-            if point == 0 {
-                dbg!(&rtm_input);
-            }
-
             Ok(rtm_input.run(&parameters))
         })
         .collect_into_vec(&mut results);
 
-    // TODO: remove later
-    dbg!(parameters);
     py.check_signals()?;
 
     // Copy the intermediate results to the output arrays
