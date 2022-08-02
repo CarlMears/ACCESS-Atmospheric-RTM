@@ -69,6 +69,7 @@ impl AtmoParameters {
 /// Compute the RTM.
 #[pyfunction]
 fn compute_rtm(
+    py: Python<'_>,
     pressure: PyReadonlyArray1<f32>,
     temperature: PyReadonlyArray2<f32>,
     height: PyReadonlyArray2<f32>,
@@ -140,6 +141,7 @@ fn compute_rtm(
 
     // TODO: remove later
     dbg!(parameters);
+    py.check_signals()?;
 
     // Copy the intermediate results to the output arrays
     let mut output = AtmoParameters::new(num_points, num_freq);
