@@ -3,15 +3,18 @@
 //! These are pretty directly re-written from the original Fortran source.
 
 use once_cell::sync::OnceCell;
+use smallvec::SmallVec;
+
+const NLINES: usize = 44;
 
 struct OxygenCoefficients {
-    f0: Vec<f32>,
-    a1: Vec<f32>,
-    a2: Vec<f32>,
-    a3: Vec<f32>,
-    a4: Vec<f32>,
-    a5: Vec<f32>,
-    a6: Vec<f32>,
+    f0: [f32; NLINES],
+    a1: [f32; NLINES],
+    a2: [f32; NLINES],
+    a3: [f32; NLINES],
+    a4: [f32; NLINES],
+    a5: [f32; NLINES],
+    a6: [f32; NLINES],
 }
 
 /// Oxygen absorption coefficients
@@ -28,8 +31,6 @@ static OXY_COEF: OnceCell<OxygenCoefficients> = OnceCell::new();
 /// Rust by Richard Lindsley.
 pub(crate) fn fdabsoxy_1992_modified(p: f32, t: f32, pv: f32, freq: f32) -> f32 {
     // Many of the variables are retained from the original Fortran
-    const NLINES: usize = 44;
-
     let OxygenCoefficients {
         f0,
         a1,
@@ -39,11 +40,12 @@ pub(crate) fn fdabsoxy_1992_modified(p: f32, t: f32, pv: f32, freq: f32) -> f32 
         a5,
         a6,
     } = OXY_COEF.get_or_init(|| {
-        let mut a4 = vec![0.; 38];
-        let mut a4_end = vec![0.6; 6];
-        a4.append(&mut a4_end);
+        let mut a4 = [0.; NLINES];
+        for i in NLINES - 6..NLINES {
+            a4[i] = 0.6;
+        }
 
-        let h1 = vec![
+        let h1 = [
             50.474238, 50.987749, 51.503350, 52.021410, 52.542394, 53.066907, 53.595749, 54.130000,
             54.671159, 55.221367, 55.783802, 56.264775, 56.363389, 56.968206, 57.612484, 58.323877,
             58.446590, 59.164207, 59.590983, 60.306061, 60.434776, 61.150560, 61.800154, 62.411215,
@@ -51,7 +53,7 @@ pub(crate) fn fdabsoxy_1992_modified(p: f32, t: f32, pv: f32, freq: f32) -> f32 
             66.836830, 67.369598, 67.900867, 68.431005, 68.960311, 118.750343, 368.498350,
             424.763124, 487.249370, 715.393150, 773.839675, 834.145330,
         ];
-        let h2 = vec![
+        let h2 = [
             0.94e-6, 2.46e-6, 6.08e-6, 14.14e-6, 31.02e-6, 64.10e-6, 124.70e-6, 228.00e-6,
             391.80e-6, 631.60e-6, 953.50e-6, 548.90e-6, 1344.00e-6, 1763.00e-6, 2141.00e-6,
             2386.00e-6, 1457.00e-6, 2404.00e-6, 2112.00e-6, 2124.00e-6, 2461.00e-6, 2504.00e-6,
@@ -59,13 +61,13 @@ pub(crate) fn fdabsoxy_1992_modified(p: f32, t: f32, pv: f32, freq: f32) -> f32 
             274.80e-6, 153.00e-6, 80.09e-6, 39.46e-6, 18.32e-6, 8.01e-6, 3.30e-6, 1.28e-6,
             945.00e-6, 67.90e-6, 638.00e-6, 235.00e-6, 99.60e-6, 671.00e-6, 180.00e-6,
         ];
-        let h3 = vec![
+        let h3 = [
             9.694, 8.694, 7.744, 6.844, 6.004, 5.224, 4.484, 3.814, 3.194, 2.624, 2.119, 0.015,
             1.660, 1.260, 0.915, 0.626, 0.084, 0.391, 0.212, 0.212, 0.391, 0.626, 0.915, 1.260,
             0.083, 1.665, 2.115, 2.620, 3.195, 3.815, 4.485, 5.225, 6.005, 6.845, 7.745, 8.695,
             9.695, 0.009, 0.049, 0.044, 0.049, 0.145, 0.130, 0.147,
         ];
-        let h4 = vec![
+        let h4 = [
             8.60e-3, 8.70e-3, 8.90e-3, 9.20e-3, 9.40e-3, 9.70e-3, 10.00e-3, 10.20e-3, 10.50e-3,
             10.79e-3, 11.10e-3, 16.46e-3, 11.44e-3, 11.81e-3, 12.21e-3, 12.66e-3, 14.49e-3,
             13.19e-3, 13.60e-3, 13.82e-3, 12.97e-3, 12.48e-3, 12.07e-3, 11.71e-3, 14.68e-3,
@@ -73,33 +75,29 @@ pub(crate) fn fdabsoxy_1992_modified(p: f32, t: f32, pv: f32, freq: f32) -> f32 
             8.90e-3, 8.70e-3, 8.60e-3, 16.30e-3, 19.20e-3, 19.16e-3, 19.20e-3, 18.10e-3, 18.10e-3,
             18.10e-3,
         ];
-        let h5 = vec![
+        let h5 = [
             0.210, 0.190, 0.171, 0.144, 0.118, 0.114, 0.200, 0.291, 0.325, 0.224, -0.144, 0.339,
             -0.258, -0.362, -0.533, -0.178, 0.650, -0.628, 0.665, -0.613, 0.606, 0.090, 0.496,
             0.313, -0.433, 0.208, 0.094, -0.270, -0.366, -0.326, -0.232, -0.146, -0.147, -0.174,
             -0.198, -0.210, -0.220, -0.031, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
         ];
-        let h6 = vec![
+        let h6 = [
             0.685, 0.680, 0.673, 0.664, 0.653, 0.621, 0.508, 0.375, 0.265, 0.295, 0.613, -0.098,
             0.655, 0.645, 0.606, 0.044, -0.127, 0.231, -0.078, 0.070, -0.282, -0.058, -0.662,
             -0.676, 0.084, -0.668, -0.614, -0.289, -0.259, -0.368, -0.500, -0.609, -0.639, -0.647,
             -0.655, -0.660, -0.665, 0.008, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
         ];
 
-        let a1: Vec<_> = h2.iter().zip(&h1).map(|(h2, h1)| h2 / h1).collect();
+        let mut a1 = [0.; NLINES];
+        a1.iter_mut().zip(&h2).zip(&h1).for_each(|((a1, h2), h1)| {
+            *a1 = h2 / h1;
+        });
         let f0 = h1;
         let a2 = h3;
         let a3 = h4;
-        let a5: Vec<_> = h5.into_iter().map(|h5| 0.001 * h5).collect();
-        let a6: Vec<_> = h6.into_iter().map(|h6| 0.001 * h6).collect();
+        let a5 = h5.map(|h5| 0.001 * h5);
+        let a6 = h6.map(|h6| 0.001 * h6);
 
-        assert_eq!(f0.len(), NLINES);
-        assert_eq!(a1.len(), NLINES);
-        assert_eq!(a2.len(), NLINES);
-        assert_eq!(a3.len(), NLINES);
-        assert_eq!(a4.len(), NLINES);
-        assert_eq!(a5.len(), NLINES);
-        assert_eq!(a6.len(), NLINES);
         OxygenCoefficients {
             f0,
             a1,
@@ -299,15 +297,15 @@ pub(crate) fn atm_tran(inc: f32, t: &[f32], z: &[f32], tabs: &[f32]) -> (f32, f3
     // Number of levels *not* including the surface
     let num_levels = t.len() - 1;
 
-    let opacity: Vec<_> = (1..=num_levels)
+    let opacity: SmallVec<[f32; 64]> = (1..=num_levels)
         .into_iter()
         .map(|i| -dsdh * 0.5 * (tabs[i - 1] + tabs[i]) * (z[i] - z[i - 1]))
         .collect();
-    let t_avg: Vec<_> = (1..=num_levels)
+    let t_avg: SmallVec<[f32; 64]> = (1..=num_levels)
         .into_iter()
         .map(|i| 0.5 * (t[i - 1] + t[i]))
         .collect();
-    let ems: Vec<_> = opacity.iter().map(|opacity| 1.0 - opacity.exp()).collect();
+    let ems: SmallVec<[f32; 64]> = opacity.iter().map(|opacity| 1.0 - opacity.exp()).collect();
 
     let (sum_down, _sum_op) =
         (1..=num_levels)

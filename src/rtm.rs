@@ -2,10 +2,10 @@
 
 mod core;
 
-use std::num::NonZeroUsize;
-
 use crate::error::RtmError;
 use crate::rtm::core::{abh2o_rk_modified, atm_tran, fdabsoxy_1992_modified, fdcldabs};
+use smallvec::SmallVec;
+use std::num::NonZeroUsize;
 
 /// Input parameters for the RTM that are constant.
 #[derive(Debug)]
@@ -13,9 +13,9 @@ pub struct RtmParameters {
     /// Number of frequencies to compute.
     num_freqs: NonZeroUsize,
     /// Microwave frequencies in GHz, with a length of `num_freqs`.
-    frequency: Vec<f32>,
+    frequency: SmallVec<[f32; 8]>,
     /// Earth incidence angle in degrees, with a length of `num_freqs`.
-    incidence: Vec<f32>,
+    incidence: SmallVec<[f32; 8]>,
 }
 
 /// Inputs for the RTM for a single point. Unlike [`RtmParameters`], these
@@ -47,11 +47,11 @@ pub struct RtmInputs {
 #[derive(Debug)]
 pub struct RtmOutputs {
     /// Atmospheric transmissivity as a function of frequency index.
-    pub tran: Vec<f32>,
+    pub tran: SmallVec<[f32; 8]>,
     /// Atmospheric upwelling in K as a function of frequency index.
-    pub tb_up: Vec<f32>,
+    pub tb_up: SmallVec<[f32; 8]>,
     /// Atmospheric downwelling in K as a function of frequency index.
-    pub tb_down: Vec<f32>,
+    pub tb_down: SmallVec<[f32; 8]>,
 }
 
 impl RtmParameters {
@@ -63,8 +63,8 @@ impl RtmParameters {
         // checked
         Ok(Self {
             num_freqs: freqs.len().try_into().unwrap(),
-            frequency: freqs.to_vec(),
-            incidence: eia.to_vec(),
+            frequency: SmallVec::from_slice(freqs),
+            incidence: SmallVec::from_slice(eia),
         })
     }
 
@@ -225,13 +225,14 @@ impl RtmInputs {
         // Scaling factor to convert from dB/km to Np/km
         let nep_scale = 0.1 * f32::ln(10.0);
 
-        let mut tran = Vec::with_capacity(parameters.num_freqs.get());
-        let mut tb_up = Vec::with_capacity(parameters.num_freqs.get());
-        let mut tb_down = Vec::with_capacity(parameters.num_freqs.get());
+        let mut tran = SmallVec::new();
+        let mut tb_up = SmallVec::new();
+        let mut tb_down = SmallVec::new();
 
         for (&freq, &inc) in parameters.frequency.iter().zip(&parameters.incidence) {
             // Build up total absorption coefficient profile
-            let absorption_profile: Vec<_> = (self.surface_index..self.num_levels.get() + 1)
+            let absorption_profile: SmallVec<[f32; 64]> = (self.surface_index
+                ..self.num_levels.get() + 1)
                 .map(|level_index| {
                     // Water vapor and oxygen absorption coefficients at this level converted to Np/km
                     let oxygen = fdabsoxy_1992_modified(

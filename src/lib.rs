@@ -8,7 +8,7 @@ pub(crate) mod error;
 pub(crate) mod rtm;
 
 use error::RtmError;
-use ndarray::{Array1, Array2, Axis};
+use ndarray::{Array2, ArrayView1, Axis};
 use numpy::{PyArray2, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
 use pyo3::prelude::*;
 use rayon::prelude::*;
@@ -138,26 +138,27 @@ fn compute_rtm(
 
     // Copy the intermediate results to the output arrays
     let mut output = AtmoParameters::new(num_points, num_freq);
-    results.into_iter().enumerate().try_for_each(
-        |(index, rtm_output)| -> Result<_, RtmError> {
+    results
+        .into_iter()
+        .enumerate()
+        .try_for_each(|(index, rtm_output)| -> Result<_, RtmError> {
             let rtm::RtmOutputs {
                 tran,
                 tb_up,
                 tb_down,
             } = rtm_output?;
 
-            let rhs = Array1::from_vec(tran);
+            let rhs = ArrayView1::from(tran.as_slice());
             output.tran.index_axis_mut(Axis(0), index).assign(&rhs);
 
-            let rhs = Array1::from_vec(tb_up);
+            let rhs = ArrayView1::from(tb_up.as_slice());
             output.tb_up.index_axis_mut(Axis(0), index).assign(&rhs);
 
-            let rhs = Array1::from_vec(tb_down);
+            let rhs = ArrayView1::from(tb_down.as_slice());
             output.tb_down.index_axis_mut(Axis(0), index).assign(&rhs);
 
             Ok(())
-        },
-    )?;
+        })?;
 
     Ok(output)
 }
