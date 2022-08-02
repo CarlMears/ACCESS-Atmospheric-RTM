@@ -9,6 +9,7 @@ dependencies = [
  "ndarray",
  "num-complex",
  "numpy",
+ "once_cell",
  "pyo3",
  "rayon",
 ]
