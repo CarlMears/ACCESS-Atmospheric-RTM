@@ -29,4 +29,3 @@ opt-level = 1
 
 [profile.release]
 codegen-units = 1
-lto = "thin"
