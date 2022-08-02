@@ -190,20 +190,39 @@ pub(crate) fn fdabsoxy_1992_modified(p: f32, t: f32, pv: f32, freq: f32) -> f32 
     let pdry = 0.1 * p - pwet;
     let xterm = 1.0 - tht;
 
-    let sum: f64 = (0..NLINES_O2)
-        .into_iter()
-        .map(|i| {
-            let ga = a3[i] * (pdry * tht.powf(0.8 - a4[i]) + 1.1 * tht * pwet);
+    // Rather than doing one loop over the oxygen lines (as in the original
+    // Fortran), it works out better to build some lazy iterators, collect an
+    // intermediate result into a stack-local array, and then finally transform
+    // and sum that. This must be due to cache locality effects?
+    let ga = a3
+        .iter()
+        .zip(a4)
+        .map(|(a3, a4)| a3 * (pdry * tht.powf(0.8 - a4) + 1.1 * tht * pwet));
+
+    let delta = a5
+        .iter()
+        .zip(a6)
+        .map(|(a5, a6)| (a5 + a6 * tht) * p * tht.powf(0.8));
+
+    let ff: SmallVec<[f32; 64]> = f0
+        .iter()
+        .zip(ga)
+        .zip(delta)
+        .map(|((f0, ga), delta)| {
+            let rnuneg = f0 - freq;
+            let rnupos = f0 + freq;
             let ga_sq = ga.powi(2);
-            let delta = (a5[i] + a6[i] * tht) * p * tht.powf(0.8);
 
-            let rnuneg = f0[i] - freq;
-            let rnupos = f0[i] + freq;
-            let ff = (ga - rnuneg * delta) / (ga_sq + rnuneg.powi(2))
-                + (ga - rnupos * delta) / (ga_sq + rnupos.powi(2));
-
-            f64::from(ff * a1[i] * f32::exp(a2[i] * xterm))
+            (ga - rnuneg * delta) / (ga_sq + rnuneg.powi(2))
+                + (ga - rnupos * delta) / (ga_sq + rnupos.powi(2))
         })
+        .collect();
+
+    let sum: f64 = ff
+        .iter()
+        .zip(a1)
+        .zip(a2)
+        .map(|((ff, a1), a2)| f64::from(ff * a1 * f32::exp(a2 * xterm)))
         .sum();
     let sum = sum.max(0.0);
 
