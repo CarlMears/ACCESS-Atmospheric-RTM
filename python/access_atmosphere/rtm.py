@@ -3,6 +3,8 @@
 This is implemented as a Python extension, written in Rust.
 """
 
+from typing import Optional
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -21,6 +23,7 @@ def compute(
     surface_pressure: NDArray[np.float32],
     incidence_angle: NDArray[np.float32],
     frequency: NDArray[np.float32],
+    num_threads: Optional[int] = None,
 ) -> AtmoParameters:
     """Compute the radiative transfer model for the atmosphere.
 
@@ -61,6 +64,9 @@ def compute(
 
     The returned atmospheric parameters are each dimensioned as (`num_points`,
     `num_freq`).
+
+    The number of worker threads is controlled by `num_threads`. It must be a
+    positive integer, or `None` to automatically choose the number of threads.
     """
     # Check all inputs
     if pressure.ndim != 1 or temperature.ndim != 2 or incidence_angle.ndim != 1:
@@ -94,7 +100,13 @@ def compute(
     ):
         raise Exception("Unexpected input shapes")
 
+    if num_threads is not None and num_threads < 0:
+        raise Exception("Number of threads must be non-negative")
+
     return compute_rtm(
+        num_freq,
+        num_levels,
+        num_points,
         pressure,
         temperature,
         height,
@@ -106,7 +118,5 @@ def compute(
         surface_pressure,
         incidence_angle,
         frequency,
-        num_levels,
-        num_points,
-        num_freq,
+        num_threads,
     )

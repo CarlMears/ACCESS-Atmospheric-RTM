@@ -231,7 +231,9 @@ def combine_rtm(hourly: Sequence[RtmDailyData]) -> RtmDailyData:
     return full_data
 
 
-def run_rtm(era5_data: era5.Era5DailyData, verbose: bool = False) -> RtmDailyData:
+def run_rtm(
+    era5_data: era5.Era5DailyData, verbose: bool = False, workers: Optional[int] = None
+) -> RtmDailyData:
     """Run the RTM on ERA5 daily data."""
     if verbose:
         print("Running RTM over all data")
@@ -255,6 +257,7 @@ def run_rtm(era5_data: era5.Era5DailyData, verbose: bool = False) -> RtmDailyDat
         np.ravel(era5_data.surface_pressure),
         REF_EIA,
         REF_FREQ,
+        workers,
     )
 
     tock = perf_counter_ns()
@@ -289,6 +292,7 @@ def convert_all(
     time_indices: Optional[Sequence[int]],
     one_pass: bool,
     verbose: bool = False,
+    workers: Optional[int] = None,
 ) -> None:
     """Read the ERA5 profile/surface files and run the RTM and write its output."""
     all_time_indices: Union[Sequence[int], List[int]]
@@ -301,7 +305,7 @@ def convert_all(
         era5_data = era5.read_era5_data(
             era5_surface_input, era5_levels_input, all_time_indices, verbose=verbose
         )
-        rtm_data = run_rtm(era5_data, verbose)
+        rtm_data = run_rtm(era5_data, verbose, workers)
     else:
         # Read the ERA5 data one hour at a time and process just that much
         hourly_rtm_data = []
@@ -309,7 +313,7 @@ def convert_all(
             era5_data = era5.read_era5_data(
                 era5_surface_input, era5_levels_input, [time_index], verbose=verbose
             )
-            hourly_rtm_data.append(run_rtm(era5_data, verbose))
+            hourly_rtm_data.append(run_rtm(era5_data, verbose, workers))
 
         # Accumulate all the hourly data together
         rtm_data = combine_rtm(hourly_rtm_data)
@@ -343,6 +347,14 @@ if __name__ == "__main__":
             "increased memory consumption."
         ),
     )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        help=(
+            "Number of worker threads to use. If unspecified, "
+            "the number of detected logical CPUs."
+        ),
+    )
     args = parser.parse_args()
 
     print(f"ERA5 surface file: {args.era5_surface}")
@@ -350,6 +362,10 @@ if __name__ == "__main__":
     print(f"RTM output file: {args.rtm_out}")
     if args.one_pass:
         print("One-pass mode enabled")
+    if args.workers:
+        print(f"Worker threads: {args.workers}")
+    else:
+        print("Worker threads: (automatic)")
     convert_all(
         args.era5_surface,
         args.era5_levels,
@@ -357,4 +373,5 @@ if __name__ == "__main__":
         args.time,
         args.one_pass,
         verbose=True,
+        workers=args.workers,
     )

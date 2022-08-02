@@ -10,14 +10,13 @@ pub(crate) mod rtm;
 use error::RtmError;
 use ndarray::{Array2, ArrayView1, Axis};
 use numpy::{PyArray2, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use rayon::prelude::*;
 use rtm::{RtmInputs, RtmParameters};
 
 impl From<RtmError> for PyErr {
     fn from(e: RtmError) -> Self {
-        use pyo3::exceptions::PyValueError;
-
         match e {
             RtmError::InconsistentInputs => PyValueError::new_err(e.to_string()),
             RtmError::NoSurface => PyValueError::new_err(e.to_string()),
@@ -70,6 +69,9 @@ impl AtmoParameters {
 #[pyfunction]
 fn compute_rtm(
     py: Python<'_>,
+    num_freq: usize,
+    num_levels: usize,
+    num_points: usize,
     pressure: PyReadonlyArray1<f32>,
     temperature: PyReadonlyArray2<f32>,
     height: PyReadonlyArray2<f32>,
@@ -81,9 +83,7 @@ fn compute_rtm(
     surface_pressure: PyReadonlyArray1<f32>,
     incidence_angle: PyReadonlyArray1<f32>,
     frequency: PyReadonlyArray1<f32>,
-    num_levels: usize,
-    num_points: usize,
-    num_freq: usize,
+    num_threads: Option<usize>,
 ) -> PyResult<AtmoParameters> {
     let parameters = RtmParameters::new(frequency.as_slice()?, incidence_angle.as_slice()?)?;
     if parameters.len() != num_freq || pressure.len() != num_levels {
@@ -103,36 +103,43 @@ fn compute_rtm(
 
     let mut results = Vec::new();
 
-    (0..num_points)
-        .into_par_iter()
-        .map(|point| -> Result<_, RtmError> {
-            let rtm_input = RtmInputs::new(
-                &pressure,
-                surface_temperature[point],
-                temperature
-                    .index_axis(Axis(0), point)
-                    .as_slice()
-                    .ok_or(RtmError::NotContiguous)?,
-                surface_height[point],
-                height
-                    .index_axis(Axis(0), point)
-                    .as_slice()
-                    .ok_or(RtmError::NotContiguous)?,
-                surface_dewpoint[point],
-                specific_humidity
-                    .index_axis(Axis(0), point)
-                    .as_slice()
-                    .ok_or(RtmError::NotContiguous)?,
-                liquid_content
-                    .index_axis(Axis(0), point)
-                    .as_slice()
-                    .ok_or(RtmError::NotContiguous)?,
-                surface_pressure[point],
-            )?;
+    let pool = rayon::ThreadPoolBuilder::new()
+        .num_threads(num_threads.unwrap_or(0))
+        .build()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
 
-            Ok(rtm_input.run(&parameters))
-        })
-        .collect_into_vec(&mut results);
+    pool.install(|| {
+        (0..num_points)
+            .into_par_iter()
+            .map(|point| -> Result<_, RtmError> {
+                let rtm_input = RtmInputs::new(
+                    &pressure,
+                    surface_temperature[point],
+                    temperature
+                        .index_axis(Axis(0), point)
+                        .as_slice()
+                        .ok_or(RtmError::NotContiguous)?,
+                    surface_height[point],
+                    height
+                        .index_axis(Axis(0), point)
+                        .as_slice()
+                        .ok_or(RtmError::NotContiguous)?,
+                    surface_dewpoint[point],
+                    specific_humidity
+                        .index_axis(Axis(0), point)
+                        .as_slice()
+                        .ok_or(RtmError::NotContiguous)?,
+                    liquid_content
+                        .index_axis(Axis(0), point)
+                        .as_slice()
+                        .ok_or(RtmError::NotContiguous)?,
+                    surface_pressure[point],
+                )?;
+
+                Ok(rtm_input.run(&parameters))
+            })
+            .collect_into_vec(&mut results);
+    });
 
     py.check_signals()?;
 

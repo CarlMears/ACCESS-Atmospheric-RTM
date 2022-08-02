@@ -1,4 +1,4 @@
-from typing import final
+from typing import final, Optional
 
 import numpy as np
 from numpy.typing import NDArray
@@ -33,6 +33,9 @@ class AtmoParameters:
         ...
 
 def compute_rtm(
+    num_freq: int,
+    num_levels: int,
+    num_points: int,
     pressure: NDArray[np.float32],
     temperature: NDArray[np.float32],
     height: NDArray[np.float32],
@@ -44,7 +47,5 @@ def compute_rtm(
     surface_pressure: NDArray[np.float32],
     incidence_angle: NDArray[np.float32],
     frequency: NDArray[np.float32],
-    num_levels: int,
-    num_points: int,
-    num_freq: int,
+    num_threads: Optional[int],
 ) -> AtmoParameters: ...

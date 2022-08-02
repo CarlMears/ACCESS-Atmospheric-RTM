@@ -123,15 +123,15 @@ python -m access_atmosphere.process \
     access_era5_2020-01-01.nc
 ```
 
-<!-- 
-# TODO: update this for however I expose the parallelism from Rust
-
-The Fortran code is compiled with [OpenMP](https://www.openmp.org/) in order to
-process each profile in parallel using a pool of worker threads. By default,
-this will be as many threads as there are logical CPUs detected on the machine.
-To modify this at runtime, use the `OMP_NUM_THREADS` environment variable. For
-instance, to set exactly 4 threads:
+The Rust code uses [Rayon](https://github.com/rayon-rs/rayon) to process each
+profile in parallel using a pool of worker threads. By default, this will be as
+many threads as there are logical CPUs detected on the machine. To adjust this,
+use the `--workers` command-line option or use the `RAYON_NUM_THREADS`
+environment variable. For instance, to use exactly 4 threads:
 
 ```bash
-env OMP_NUM_THREADS=4 python3 -m access_atmosphere.process ...
-``` -->
+# Via command-line option
+python3 -m access_atmosphere.process --workers 4 ...
+# Via environment variable
+env RAYON_NUM_THREADS=4 python3 -m access_atmosphere.process ...
+```
