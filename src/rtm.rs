@@ -286,3 +286,21 @@ fn buck_vap(temp: f32) -> f32 {
     let temp_c = temp - 273.15;
     6.1121 * f32::exp((18.678 - temp_c / 234.5) * (temp_c / (257.14 + temp_c)))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use approx::assert_relative_eq;
+
+    /// Check some values for the Buck equation. These are compared against the
+    /// Fortran version.
+    #[test]
+    fn buck_vapor() {
+        let input_temperatures = [273.15, 290., 300., 310.];
+        let expected_outputs = [6.1121, 19.1925564, 35.3524513, 62.2872276];
+
+        for (&temperature, &expected_output) in input_temperatures.iter().zip(&expected_outputs) {
+            assert_relative_eq!(buck_vap(temperature), expected_output);
+        }
+    }
+}
