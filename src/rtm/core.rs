@@ -106,6 +106,7 @@ pub(crate) fn atm_tran(inc: f32, t: &[f32], z: &[f32], tabs: &[f32]) -> (f32, f3
 /// 1992. Modified over the years by Frank Wentz and converted from Fortran to
 /// Rust by Richard Lindsley.
 pub(crate) fn fdabsoxy_1992_modified(p: f32, t: f32, pv: f32, freq: f32) -> f32 {
+    #![allow(clippy::excessive_precision)]
     // Many of the variables are retained from the original Fortran
     let OxygenCoefficients {
         f0,
@@ -116,9 +117,10 @@ pub(crate) fn fdabsoxy_1992_modified(p: f32, t: f32, pv: f32, freq: f32) -> f32 
         a5,
         a6,
     } = O2_COEF.get_or_init(|| {
+        // All but the last six entries in a4 are 0
         let mut a4 = [0.; NLINES_O2];
-        for i in NLINES_O2 - 6..NLINES_O2 {
-            a4[i] = 0.6;
+        for a4 in a4.iter_mut().skip(NLINES_O2 - 6) {
+            *a4 = 0.6;
         }
 
         let h1 = [
@@ -261,6 +263,7 @@ pub(crate) fn abh2o_rk_modified(p: f32, t: f32, pv: f32, freq: f32) -> f32 {
         b5,
         b6,
     } = H2O_COEF.get_or_init(|| {
+        #[allow(clippy::excessive_precision)]
         // line frequencies
         let f0 = [
             22.2351, 183.3101, 321.2256, 325.1529, 380.1974, 439.1508, 443.0183, 448.0011,
@@ -300,6 +303,7 @@ pub(crate) fn abh2o_rk_modified(p: f32, t: f32, pv: f32, freq: f32) -> f32 {
         ];
 
         let mut b1_modified = [0.; NLINES_H2O];
+        #[allow(clippy::excessive_precision)]
         for ((b1_new, b1), &f0) in b1_modified.iter_mut().zip(&b1).zip(&f0) {
             *b1_new = 1.8281089E+14 * b1 / f32::powi(f0, 2);
         }
@@ -430,6 +434,7 @@ pub(crate) fn fdcldabs(freq: f32, t: f32, rhol: f32) -> f32 {
 ///
 /// The imaginary part is negative to be consistent with "wentz1" convention.
 fn meissner(freq: f32, t: f32, s: f32) -> Complex32 {
+    #![allow(clippy::excessive_precision)]
     const F0: f32 = 17.97510;
 
     // Convert from K to °C
@@ -459,6 +464,7 @@ fn meissner(freq: f32, t: f32, s: f32) -> Complex32 {
 ///
 /// References: T. Meissner  and F. Wentz, IEEE TGARS, 42(9), 2004, 1836-1849.
 fn dielectric_meissner_wentz(sst: f32, s: f32) -> (f32, f32, f32, f32, f32, f32) {
+    #![allow(clippy::excessive_precision)]
     const X: [f32; 11] = [
         5.7230e+00,
         2.2379e-02,

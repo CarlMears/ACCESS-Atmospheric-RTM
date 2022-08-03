@@ -10,8 +10,6 @@ use std::num::NonZeroUsize;
 /// Input parameters for the RTM that are constant.
 #[derive(Debug)]
 pub struct RtmParameters {
-    /// Number of frequencies to compute.
-    num_freqs: NonZeroUsize,
     /// Microwave frequencies in GHz, with a length of `num_freqs`.
     frequency: SmallVec<[f32; 8]>,
     /// Earth incidence angle in degrees, with a length of `num_freqs`.
@@ -59,18 +57,10 @@ impl RtmParameters {
         if freqs.len() != eia.len() || freqs.is_empty() {
             return Err(RtmError::InconsistentInputs);
         }
-        // The unwrap() here is okay since the length of `freqs` is already
-        // checked
         Ok(Self {
-            num_freqs: freqs.len().try_into().unwrap(),
             frequency: SmallVec::from_slice(freqs),
             incidence: SmallVec::from_slice(eia),
         })
-    }
-
-    /// Return the number of frequencies used.
-    pub fn len(&self) -> usize {
-        self.num_freqs.into()
     }
 }
 
@@ -78,6 +68,7 @@ impl RtmInputs {
     /// Prepare and convert values.
     ///
     /// The slices (`levels`, `temperature`, etc) must all be the same length.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         levels: &[f32],
         surface_temperature: f32,
@@ -89,6 +80,7 @@ impl RtmInputs {
         liquid_content: &[f32],
         surface_pressure: f32,
     ) -> Result<Self, RtmError> {
+        #![allow(clippy::excessive_precision)]
         /// Mean radius of the Earth in meters
         const R_EARTH: f32 = 6371e3;
 
@@ -125,7 +117,7 @@ impl RtmInputs {
         let prepend_with = |level_data: &[f32], zero_value: f32, surface_value: f32| -> Vec<f32> {
             let mut prepended = Vec::with_capacity(num_levels.get() + 1);
             prepended.push(zero_value);
-            prepended.extend_from_slice(&level_data);
+            prepended.extend_from_slice(level_data);
 
             prepended[surface_index] = surface_value;
             prepended

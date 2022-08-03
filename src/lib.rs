@@ -106,6 +106,7 @@ impl AtmoParameters {
 /// The number of worker threads is controlled by `num_threads`. It must be a
 /// positive integer, or `None` to automatically choose the number of threads.
 #[pyfunction]
+#[allow(clippy::too_many_arguments)]
 fn compute_rtm(
     py: Python<'_>,
     pressure: PyReadonlyArray1<f32>,
