@@ -65,13 +65,49 @@ impl AtmoParameters {
     }
 }
 
-/// Compute the RTM.
+/// Compute the radiative transfer model for the atmosphere.
+///
+/// Most of the inputs are numpy arrays and are either 1d or 2d. The `pressure`
+/// parameter is the pressure levels in hPa and has shape (`num_levels`, ). It
+/// is treated as a constant (i.e., not a function of `num_points`).
+///
+/// `pressure`: pressure levels, in hPa
+///
+/// The following are input profiles and have shape (`num_points`,
+/// `num_levels`):
+///
+/// `temperature`: physical temperature in K
+///
+/// `height`: geometric height above the geoid in m
+///
+/// `specific_humidity`: specific humidity in kg/kg
+///
+/// `liquid_content`: liquid water content (from clouds) in kg/kg
+///
+/// The following are surface parameters and have shape (`num_points`, ):
+///
+/// `surface_temperature`: 2 meter air temperature in K
+///
+/// `surface_height`: geopotential height at the surface in m
+///
+/// `surface_dewpoint`: 2 meter dewpoint in K
+///
+/// `surface_pressure`: surface pressure in hPa
+///
+/// The following are RTM parameters and have shape (`num_freq`, ):
+///
+/// `incidence_angle`: Earth incidence angle in degrees
+///
+/// `frequency`: microwave frequency in GHz
+///
+/// The returned atmospheric parameters are each dimensioned as (`num_points`,
+/// `num_freq`).
+///
+/// The number of worker threads is controlled by `num_threads`. It must be a
+/// positive integer, or `None` to automatically choose the number of threads.
 #[pyfunction]
 fn compute_rtm(
     py: Python<'_>,
-    num_freq: usize,
-    num_levels: usize,
-    num_points: usize,
     pressure: PyReadonlyArray1<f32>,
     temperature: PyReadonlyArray2<f32>,
     height: PyReadonlyArray2<f32>,
@@ -85,10 +121,38 @@ fn compute_rtm(
     frequency: PyReadonlyArray1<f32>,
     num_threads: Option<usize>,
 ) -> PyResult<AtmoParameters> {
-    let parameters = RtmParameters::new(frequency.as_slice()?, incidence_angle.as_slice()?)?;
-    if parameters.len() != num_freq || pressure.len() != num_levels {
-        return Err(RtmError::InconsistentInputs.into());
+    let num_freq = frequency.len();
+    let num_levels = pressure.len();
+    let num_points = temperature.shape()[0];
+
+    // Check shapes of all inputs
+    {
+        let two_dims = &[
+            temperature.dims(),
+            height.dims(),
+            specific_humidity.dims(),
+            liquid_content.dims(),
+        ];
+        let one_dim_points = &[
+            surface_temperature.len(),
+            surface_height.len(),
+            surface_dewpoint.len(),
+            surface_pressure.len(),
+        ];
+        let one_dim_freqs = &[incidence_angle.len(), frequency.len()];
+
+        if two_dims.iter().any(|d| d != &[num_points, num_levels]) {
+            return Err(RtmError::InconsistentInputs.into());
+        }
+        if one_dim_points.iter().any(|&d| d != num_points) {
+            return Err(RtmError::InconsistentInputs.into());
+        }
+        if one_dim_freqs.iter().any(|&d| d != num_freq) {
+            return Err(RtmError::InconsistentInputs.into());
+        }
     }
+
+    let parameters = RtmParameters::new(frequency.as_slice()?, incidence_angle.as_slice()?)?;
 
     // Ensure everything is converted and contiguous
     let pressure = pressure.as_slice()?;

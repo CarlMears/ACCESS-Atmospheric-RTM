@@ -20,7 +20,8 @@ import numpy as np
 from netCDF4 import Dataset, getlibversion, num2date
 from numpy.typing import NDArray
 
-from . import era5, rtm
+from . import era5
+from .access_atmosphere import compute_rtm
 
 # TODO(Python 3.9): once Python 3.9 is the minimum supported version, switch to
 # the builtin list instead of typing.List
@@ -245,7 +246,7 @@ def run_rtm(
     shape_4d = era5_data.temperature.shape
     num_time, num_lat, num_lon, num_levels = shape_4d[0:4]
     num_points = num_time * num_lat * num_lon
-    atmo_results = rtm.compute(
+    atmo_results = compute_rtm(
         era5_data.levels,
         np.reshape(era5_data.temperature, (num_points, num_levels)),
         np.reshape(era5_data.height, (num_points, num_levels)),
