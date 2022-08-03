@@ -173,37 +173,39 @@ fn compute_rtm(
         .build()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
 
-    pool.install(|| {
-        (0..num_points)
-            .into_par_iter()
-            .map(|point| -> Result<_, RtmError> {
-                let rtm_input = RtmInputs::new(
-                    &pressure,
-                    surface_temperature[point],
-                    temperature
-                        .index_axis(Axis(0), point)
-                        .as_slice()
-                        .ok_or(RtmError::NotContiguous)?,
-                    surface_height[point],
-                    height
-                        .index_axis(Axis(0), point)
-                        .as_slice()
-                        .ok_or(RtmError::NotContiguous)?,
-                    surface_dewpoint[point],
-                    specific_humidity
-                        .index_axis(Axis(0), point)
-                        .as_slice()
-                        .ok_or(RtmError::NotContiguous)?,
-                    liquid_content
-                        .index_axis(Axis(0), point)
-                        .as_slice()
-                        .ok_or(RtmError::NotContiguous)?,
-                    surface_pressure[point],
-                )?;
+    py.allow_threads(|| {
+        pool.install(|| {
+            (0..num_points)
+                .into_par_iter()
+                .map(|point| -> Result<_, RtmError> {
+                    let rtm_input = RtmInputs::new(
+                        pressure,
+                        surface_temperature[point],
+                        temperature
+                            .index_axis(Axis(0), point)
+                            .as_slice()
+                            .ok_or(RtmError::NotContiguous)?,
+                        surface_height[point],
+                        height
+                            .index_axis(Axis(0), point)
+                            .as_slice()
+                            .ok_or(RtmError::NotContiguous)?,
+                        surface_dewpoint[point],
+                        specific_humidity
+                            .index_axis(Axis(0), point)
+                            .as_slice()
+                            .ok_or(RtmError::NotContiguous)?,
+                        liquid_content
+                            .index_axis(Axis(0), point)
+                            .as_slice()
+                            .ok_or(RtmError::NotContiguous)?,
+                        surface_pressure[point],
+                    )?;
 
-                Ok(rtm_input.run(&parameters))
-            })
-            .collect_into_vec(&mut results);
+                    Ok(rtm_input.run(&parameters))
+                })
+                .collect_into_vec(&mut results);
+        });
     });
 
     py.check_signals()?;
