@@ -442,10 +442,10 @@ fn meissner(freq: f32, t: f32, s: f32) -> Complex32 {
     let (e0s, e1s, e2s, n1s, n2s, sig) = dielectric_meissner_wentz(sst, s);
 
     // Debye law (2 relaxation wavelengths)
-    let eps = (e0s - e1s) / (1.0 - Complex32::i() * (freq / n1s))
-        + (e1s - e2s) / (1.0 - Complex32::i() * (freq / n2s))
+    let eps = (e0s - e1s) / Complex32::new(1.0, -(freq / n1s))
+        + (e1s - e2s) / Complex32::new(1.0, -(freq / n2s))
         + e2s
-        + Complex32::i() * sig * F0 / freq;
+        + Complex32::new(0., sig * F0 / freq);
 
     eps.conj()
 }
