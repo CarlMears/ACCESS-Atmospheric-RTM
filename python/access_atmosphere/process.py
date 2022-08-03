@@ -1,11 +1,13 @@
-"""Process an entire daily file.
+r"""Process an entire daily file.
 
 Example usage:
 
+```bash
 python -m access_atmosphere.process \
     era5_surface_2020-01-01.nc \
     era5_levels_2020-01-01.nc \
     access_era5_2020-01-01.nc
+```
 """
 
 import argparse
