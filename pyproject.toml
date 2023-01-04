@@ -1,6 +1,6 @@
 [build-system]
 build-backend = "maturin"
-requires = ["maturin>=0.13,<0.14"]
+requires = ["maturin>=0.14,<0.15"]
 
 [project]
 name = "access-atmosphere"
@@ -25,6 +25,9 @@ repository = "http://gitlab.remss.com/access/atmospheric-rtm"
 
 [tool.isort]
 profile = "black"
+
+[tool.maturin]
+python-source = "python"
 
 [[tool.mypy.overrides]]
 ignore_missing_imports = true

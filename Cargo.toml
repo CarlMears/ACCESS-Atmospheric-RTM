@@ -24,9 +24,6 @@ approx = "0.5.1"
 abi3 = ["pyo3/abi3-py38", "generate-import-lib"]
 generate-import-lib = ["pyo3/generate-import-lib"]
 
-[package.metadata.maturin]
-python-source = "python"
-
 [profile.dev]
 opt-level = 1
 
