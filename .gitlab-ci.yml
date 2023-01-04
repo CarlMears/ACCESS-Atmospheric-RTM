@@ -47,6 +47,15 @@ stubtest:
   script:
     - nox -s stubtest -- access_atmosphere-*-cp38-cp38-*.whl
 
+rustfmt:
+  stage: test
+  needs: []
+  image: rust:1.57-bullseye
+  before_script:
+    - rustup component add rustfmt
+  script:
+    - cargo fmt --check -v
+
 rust-tests:
   stage: test
   needs: []
