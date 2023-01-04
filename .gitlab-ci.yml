@@ -73,7 +73,7 @@ build-manylinux:
   script:
     - maturin sdist
     - maturin build --release --features abi3
-    - maturin build --release -i "python3.8" -i "python3.9" -i "python3.10"
+    - maturin build --release -i "python3.8" -i "python3.9" -i "python3.10" -i "python3.11"
     - cp -t . target/wheels/*.tar.gz target/wheels/*.whl
   artifacts:
     paths:
