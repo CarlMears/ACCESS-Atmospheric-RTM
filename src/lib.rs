@@ -106,6 +106,7 @@ impl AtmoParameters {
 /// The number of worker threads is controlled by `num_threads`. It must be a
 /// positive integer, or `None` to automatically choose the number of threads.
 #[pyfunction]
+#[pyo3(signature = (pressure, temperature, height, specific_humidity, liquid_content, surface_temperature, surface_height, surface_dewpoint, surface_pressure, incidence_angle, frequency, num_threads))]
 #[allow(clippy::too_many_arguments)]
 fn compute_rtm(
     py: Python<'_>,
