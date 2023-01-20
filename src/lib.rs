@@ -39,18 +39,18 @@ struct AtmoParameters {
 /// Implement all the "getters" for the Python properties
 #[pymethods]
 impl AtmoParameters {
-    #[getter(tran)]
-    fn convert_tran<'py>(&self, py: Python<'py>) -> &'py PyArray2<f32> {
+    #[getter]
+    fn get_tran<'py>(&self, py: Python<'py>) -> &'py PyArray2<f32> {
         self.tran.to_pyarray(py)
     }
 
-    #[getter(tb_up)]
-    fn convert_tb_up<'py>(&self, py: Python<'py>) -> &'py PyArray2<f32> {
+    #[getter]
+    fn get_tb_up<'py>(&self, py: Python<'py>) -> &'py PyArray2<f32> {
         self.tb_up.to_pyarray(py)
     }
 
-    #[getter(tb_down)]
-    fn convert_tb_down<'py>(&self, py: Python<'py>) -> &'py PyArray2<f32> {
+    #[getter]
+    fn get_tb_down<'py>(&self, py: Python<'py>) -> &'py PyArray2<f32> {
         self.tb_down.to_pyarray(py)
     }
 }
