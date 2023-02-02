@@ -8,7 +8,7 @@ nox.options.sessions = ["black", "flake8", "mypy"]
 def black(session: nox.Session) -> None:
     """Check if black needs to be run"""
     session.install("black")
-    session.run("black", "--check", "--target-version=py38", "--diff", "python/")
+    session.run("black", "--check", "--diff", "python/")
 
 
 @nox.session
