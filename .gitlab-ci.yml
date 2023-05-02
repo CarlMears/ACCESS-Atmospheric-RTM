@@ -111,18 +111,18 @@ build-windows:
 
 import-linux:
   stage: test
-  image: python:3.10-slim
+  image: python:3.11-slim
   needs: [build-manylinux]
   before_script:
     - python --version
     - pip install --upgrade pip
   script:
-    - pip install --progress-bar=off ./access_atmosphere-*-cp310-cp310-*.whl
+    - pip install --progress-bar=off ./access_atmosphere-*-cp311-cp311-*.whl
     - python -c 'import access_atmosphere'
 
 publish-package:
   stage: deploy
-  image: python:3.10-slim
+  image: python:3.11-slim
   needs: ["build-windows", "build-manylinux"]
   # Once a package version is uploaded to a PyPI registry, it cannot be updated.
   # So to ensure no conflicts, only tagged releases are published.
