@@ -109,7 +109,6 @@ impl RtmInputs {
         // assumes that the levels are sorted in descending order (from high to
         // low pressure).
         let surface_index = (0..num_levels.get())
-            .into_iter()
             .find(|&i| levels[i] <= surface_pressure)
             .ok_or(RtmError::NoSurface)?;
 
@@ -127,7 +126,7 @@ impl RtmInputs {
         let mut height = prepend_with(height, surface_height, surface_height);
 
         // Convert geopotential height to geometric height
-        for z in height.iter_mut() {
+        for z in &mut height {
             *z *= R_EARTH / (R_EARTH - *z);
         }
         if height[surface_index] >= height[surface_index + 1] {
