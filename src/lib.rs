@@ -1,0 +1,247 @@
+//! RTM computation
+//!
+//! NOTE: this module is intended for the interface between Rust and Python. The
+//! real work happens in the other modules, and they do not use `pyo3`, it's
+//! only used here.
+
+pub(crate) mod error;
+pub(crate) mod rtm;
+
+use error::RtmError;
+use ndarray::{Array2, ArrayView1, Axis};
+use numpy::{PyArray2, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
+use pyo3::exceptions::PyValueError;
+use pyo3::prelude::*;
+use rayon::prelude::*;
+use rtm::{RtmInputs, RtmParameters};
+
+impl From<RtmError> for PyErr {
+    fn from(e: RtmError) -> Self {
+        match e {
+            RtmError::InconsistentInputs => PyValueError::new_err(e.to_string()),
+            RtmError::NoSurface => PyValueError::new_err(e.to_string()),
+            RtmError::NotContiguous => PyValueError::new_err(e.to_string()),
+        }
+    }
+}
+
+/// Atmospheric parameters.
+///
+/// This is just a container of multiple numpy arrays, each dimensioned as
+/// (`num_points`, `num_freq`).
+#[pyclass]
+struct AtmoParameters {
+    tran: Array2<f32>,
+    tb_up: Array2<f32>,
+    tb_down: Array2<f32>,
+}
+
+/// Implement all the "getters" for the Python properties
+#[pymethods]
+impl AtmoParameters {
+    #[getter]
+    fn get_tran<'py>(&self, py: Python<'py>) -> &'py PyArray2<f32> {
+        self.tran.to_pyarray(py)
+    }
+
+    #[getter]
+    fn get_tb_up<'py>(&self, py: Python<'py>) -> &'py PyArray2<f32> {
+        self.tb_up.to_pyarray(py)
+    }
+
+    #[getter]
+    fn get_tb_down<'py>(&self, py: Python<'py>) -> &'py PyArray2<f32> {
+        self.tb_down.to_pyarray(py)
+    }
+}
+
+impl AtmoParameters {
+    fn new(num_points: usize, num_freq: usize) -> Self {
+        Self {
+            tran: Array2::zeros([num_points, num_freq]),
+            tb_up: Array2::zeros([num_points, num_freq]),
+            tb_down: Array2::zeros([num_points, num_freq]),
+        }
+    }
+}
+
+/// Compute the radiative transfer model for the atmosphere.
+///
+/// Most of the inputs are numpy arrays and are either 1d or 2d. The `pressure`
+/// parameter is the pressure levels in hPa and has shape (`num_levels`, ). It
+/// is treated as a constant (i.e., not a function of `num_points`).
+///
+/// `pressure`: pressure levels, in hPa
+///
+/// The following are input profiles and have shape (`num_points`,
+/// `num_levels`):
+///
+/// `temperature`: physical temperature in K
+///
+/// `height`: geometric height above the geoid in m
+///
+/// `specific_humidity`: specific humidity in kg/kg
+///
+/// `liquid_content`: liquid water content (from clouds) in kg/kg
+///
+/// The following are surface parameters and have shape (`num_points`, ):
+///
+/// `surface_temperature`: 2 meter air temperature in K
+///
+/// `surface_height`: geopotential height at the surface in m
+///
+/// `surface_dewpoint`: 2 meter dewpoint in K
+///
+/// `surface_pressure`: surface pressure in hPa
+///
+/// The following are RTM parameters and have shape (`num_freq`, ):
+///
+/// `incidence_angle`: Earth incidence angle in degrees
+///
+/// `frequency`: microwave frequency in GHz
+///
+/// The returned atmospheric parameters are each dimensioned as (`num_points`,
+/// `num_freq`).
+///
+/// The number of worker threads is controlled by `num_threads`. It must be a
+/// positive integer, or `None` to automatically choose the number of threads.
+#[pyfunction]
+#[pyo3(signature = (pressure, temperature, height, specific_humidity, liquid_content, surface_temperature, surface_height, surface_dewpoint, surface_pressure, incidence_angle, frequency, num_threads))]
+#[allow(clippy::too_many_arguments)]
+fn compute_rtm(
+    py: Python<'_>,
+    pressure: PyReadonlyArray1<f32>,
+    temperature: PyReadonlyArray2<f32>,
+    height: PyReadonlyArray2<f32>,
+    specific_humidity: PyReadonlyArray2<f32>,
+    liquid_content: PyReadonlyArray2<f32>,
+    surface_temperature: PyReadonlyArray1<f32>,
+    surface_height: PyReadonlyArray1<f32>,
+    surface_dewpoint: PyReadonlyArray1<f32>,
+    surface_pressure: PyReadonlyArray1<f32>,
+    incidence_angle: PyReadonlyArray1<f32>,
+    frequency: PyReadonlyArray1<f32>,
+    num_threads: Option<usize>,
+) -> PyResult<AtmoParameters> {
+    let num_freq = frequency.len();
+    let num_levels = pressure.len();
+    let num_points = temperature.shape()[0];
+
+    // Check shapes of all inputs
+    {
+        let two_dims = &[
+            temperature.dims(),
+            height.dims(),
+            specific_humidity.dims(),
+            liquid_content.dims(),
+        ];
+        let one_dim_points = &[
+            surface_temperature.len(),
+            surface_height.len(),
+            surface_dewpoint.len(),
+            surface_pressure.len(),
+        ];
+        let one_dim_freqs = &[incidence_angle.len(), frequency.len()];
+
+        if two_dims.iter().any(|d| d != &[num_points, num_levels]) {
+            return Err(RtmError::InconsistentInputs.into());
+        }
+        if one_dim_points.iter().any(|&d| d != num_points) {
+            return Err(RtmError::InconsistentInputs.into());
+        }
+        if one_dim_freqs.iter().any(|&d| d != num_freq) {
+            return Err(RtmError::InconsistentInputs.into());
+        }
+    }
+
+    let parameters = RtmParameters::new(frequency.as_slice()?, incidence_angle.as_slice()?)?;
+
+    // Ensure everything is converted and contiguous
+    let pressure = pressure.as_slice()?;
+    let temperature = temperature.as_array();
+    let height = height.as_array();
+    let specific_humidity = specific_humidity.as_array();
+    let liquid_content = liquid_content.as_array();
+    let surface_temperature = surface_temperature.as_slice()?;
+    let surface_height = surface_height.as_slice()?;
+    let surface_dewpoint = surface_dewpoint.as_slice()?;
+    let surface_pressure = surface_pressure.as_slice()?;
+
+    let mut results = Vec::new();
+
+    let pool = rayon::ThreadPoolBuilder::new()
+        .num_threads(num_threads.unwrap_or(0))
+        .build()
+        .map_err(|e| PyValueError::new_err(e.to_string()))?;
+
+    py.allow_threads(|| {
+        pool.install(|| {
+            (0..num_points)
+                .into_par_iter()
+                .map(|point| -> Result<_, RtmError> {
+                    let rtm_input = RtmInputs::new(
+                        pressure,
+                        surface_temperature[point],
+                        temperature
+                            .index_axis(Axis(0), point)
+                            .as_slice()
+                            .ok_or(RtmError::NotContiguous)?,
+                        surface_height[point],
+                        height
+                            .index_axis(Axis(0), point)
+                            .as_slice()
+                            .ok_or(RtmError::NotContiguous)?,
+                        surface_dewpoint[point],
+                        specific_humidity
+                            .index_axis(Axis(0), point)
+                            .as_slice()
+                            .ok_or(RtmError::NotContiguous)?,
+                        liquid_content
+                            .index_axis(Axis(0), point)
+                            .as_slice()
+                            .ok_or(RtmError::NotContiguous)?,
+                        surface_pressure[point],
+                    )?;
+
+                    Ok(rtm_input.run(&parameters))
+                })
+                .collect_into_vec(&mut results);
+        });
+    });
+
+    py.check_signals()?;
+
+    // Copy the intermediate results to the output arrays
+    let mut output = AtmoParameters::new(num_points, num_freq);
+    results
+        .into_iter()
+        .enumerate()
+        .try_for_each(|(index, rtm_output)| -> Result<_, RtmError> {
+            let rtm::RtmOutputs {
+                tran,
+                tb_up,
+                tb_down,
+            } = rtm_output?;
+
+            let rhs = ArrayView1::from(tran.as_slice());
+            output.tran.index_axis_mut(Axis(0), index).assign(&rhs);
+
+            let rhs = ArrayView1::from(tb_up.as_slice());
+            output.tb_up.index_axis_mut(Axis(0), index).assign(&rhs);
+
+            let rhs = ArrayView1::from(tb_down.as_slice());
+            output.tb_down.index_axis_mut(Axis(0), index).assign(&rhs);
+
+            Ok(())
+        })?;
+
+    Ok(output)
+}
+
+/// A Python module implemented in Rust.
+#[pymodule]
+fn access_atmosphere(_py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(compute_rtm, m)?)?;
+    m.add_class::<AtmoParameters>()?;
+    Ok(())
+}
