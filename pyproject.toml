@@ -36,3 +36,34 @@ module = "netCDF4"
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
 module = "cdsapi"
+
+[tool.ruff]
+ignore = [
+  "ANN101", # Missing type annotation for `self` in method
+  "UP007", # Use `X | Y` for type annotations
+  "PYI021", # Docstrings should not be included in stubs
+]
+select = [
+  "E", # pycodestyle
+  "F", # pyflakes
+  "I", # isort
+  "D", # pydocstyle
+  "UP", # pyupgrade
+  "YTT", # flake8-2020
+  "ANN", # flake8-annotations
+  "S", # flake8-bandit
+  "BLE", # flake8-blindexcept
+  "B", # flake8-bugbear
+  "EXE", # flake8-executable
+  "PIE", # flake8-pie
+  "PYI", # flake8-pyi
+  "PTH", # flake8-use-pathlib
+  "NPY", # numpy-specific rules
+]
+target-version = "py39"
+
+[tool.ruff.per-file-ignores]
+# "Missing docstring in public module", "public class", "public method", and
+# "public function" conflicts with PYI021, "Docstrings should not be included in
+# stubs".
+"*.pyi" = ["D100", "D101", "D102", "D103"]
