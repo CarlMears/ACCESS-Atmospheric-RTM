@@ -17,12 +17,42 @@ Following the [NumPy policy of supported Python
 versions](https://numpy.org/neps/nep-0029-deprecation_policy.html#drop-schedule),
 Python 3.9 is the minimum version supported.
 
-## Building
+## Installing
+
+The `access-atmosphere` Python package is available on the GitLab-hosted PyPI
+server. To install it a new venv on Linux named `venv`:
+
+```bash
+python3 -m venv --upgrade-deps venv
+source venv/bin/activate
+pip install access-atmosphere \
+  --index-url http://gitlab.remss.com/api/v4/projects/68/packages/pypi/simple \
+  --trusted-host gitlab.remss.com
+```
+
+Or on Windows (using Python installed from https://www.python.org, which uses the `py.exe` launcher):
+
+```powershell
+# This may need to be run first, as mentioned here: https://docs.python.org/3/library/venv.html
+#
+# Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+py.exe -m venv --upgrade-deps venv
+.\venv\Scripts\Activate.ps1
+pip install access-atmosphere `
+  --index-url http://gitlab.remss.com/api/v4/projects/68/packages/pypi/simple `
+  --trusted-host gitlab.remss.com
+```
+
+Wheels are built for Linux (`manylinux_2_17`) and Windows for x86-64 for Python
+3.9 and newer.
+
+## Building (for development)
 
 To build the package locally, both [Python](https://www.python.org/) and
 [Rust](https://www.python.org/) are required. Rust can be installed using using
 [`rustup`](https://rustup.rs/). [Maturin](https://maturin.rs/) is used to build
-everything.
+and package the Python wheel.
 
 On Linux:
 
@@ -59,10 +89,16 @@ maturin develop --features abi3
 
 Alternately, the GitLab CI automatically builds wheels. The built wheels are:
 
-- x86_64 [manylinux](https://github.com/pypa/manylinux) wheels specifically for
-  Python versions 3.9 through 3.11
-- x86_64 manylinux abi3 wheel for Python 3.9 and later
+- x86_64 [manylinux_2_17](https://github.com/pypa/manylinux) wheels specifically
+  for Python versions 3.9 through 3.11
+- x86_64 manylinux_2_17 abi3 wheel for Python 3.9 and later
 - x86_64 Windows abi3 wheel for Python 3.9 and later
+
+The `manylinux_2_17` (aka `manylinux2014`) policy ensures that it is compatible
+with [most Linux distributions](https://github.com/mayeut/pep600_compliance)
+dating from CentOS 7 or newer. This also matches the minimum requirements
+starting with [Rust
+1.64](https://blog.rust-lang.org/2022/08/01/Increasing-glibc-kernel-requirements.html).
 
 The wheels can be downloaded as CI job artifacts, and for every release, are
 generated and saved in the [local package
@@ -85,6 +121,9 @@ podman build -t access_atmosphere -f Dockerfile
 ```
 
 ## Running
+
+The API documentation is built using [pdoc](https://pdoc.dev/docs/pdoc.html) and
+hosted at: <http://access.pages.remss.com/atmospheric-rtm/>.
 
 ### Downloading ERA5 data
 
