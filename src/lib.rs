@@ -1,3 +1,7 @@
+#![warn(rust_2018_idioms)]
+#![warn(missing_debug_implementations)]
+#![warn(missing_docs)]
+
 //! RTM computation
 //!
 //! NOTE: this module is intended for the interface between Rust and Python. The
@@ -110,17 +114,17 @@ impl AtmoParameters {
 #[allow(clippy::too_many_arguments)]
 fn compute_rtm(
     py: Python<'_>,
-    pressure: PyReadonlyArray1<f32>,
-    temperature: PyReadonlyArray2<f32>,
-    height: PyReadonlyArray2<f32>,
-    specific_humidity: PyReadonlyArray2<f32>,
-    liquid_content: PyReadonlyArray2<f32>,
-    surface_temperature: PyReadonlyArray1<f32>,
-    surface_height: PyReadonlyArray1<f32>,
-    surface_dewpoint: PyReadonlyArray1<f32>,
-    surface_pressure: PyReadonlyArray1<f32>,
-    incidence_angle: PyReadonlyArray1<f32>,
-    frequency: PyReadonlyArray1<f32>,
+    pressure: PyReadonlyArray1<'_, f32>,
+    temperature: PyReadonlyArray2<'_, f32>,
+    height: PyReadonlyArray2<'_, f32>,
+    specific_humidity: PyReadonlyArray2<'_, f32>,
+    liquid_content: PyReadonlyArray2<'_, f32>,
+    surface_temperature: PyReadonlyArray1<'_, f32>,
+    surface_height: PyReadonlyArray1<'_, f32>,
+    surface_dewpoint: PyReadonlyArray1<'_, f32>,
+    surface_pressure: PyReadonlyArray1<'_, f32>,
+    incidence_angle: PyReadonlyArray1<'_, f32>,
+    frequency: PyReadonlyArray1<'_, f32>,
     num_threads: Option<usize>,
 ) -> PyResult<AtmoParameters> {
     let num_freq = frequency.len();
@@ -240,7 +244,7 @@ fn compute_rtm(
 
 /// A Python module implemented in Rust.
 #[pymodule]
-fn access_atmosphere(_py: Python, m: &PyModule) -> PyResult<()> {
+fn access_atmosphere(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compute_rtm, m)?)?;
     m.add_class::<AtmoParameters>()?;
     Ok(())
