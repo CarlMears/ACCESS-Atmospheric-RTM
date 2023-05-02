@@ -58,18 +58,15 @@ pub(crate) fn atm_tran(inc: f32, t: &[f32], z: &[f32], tabs: &[f32]) -> (f32, f3
     let num_levels = t.len() - 1;
 
     let opacity: SmallVec<[f32; 64]> = (1..=num_levels)
-        .into_iter()
         .map(|i| -dsdh * 0.5 * (tabs[i - 1] + tabs[i]) * (z[i] - z[i - 1]))
         .collect();
     let t_avg: SmallVec<[f32; 64]> = (1..=num_levels)
-        .into_iter()
         .map(|i| 0.5 * (t[i - 1] + t[i]))
         .collect();
     let ems: SmallVec<[f32; 64]> = opacity.iter().map(|opacity| 1.0 - opacity.exp()).collect();
 
     let (sum_down, _sum_op) =
         (1..=num_levels)
-            .into_iter()
             .fold((0., 0.), |(sum_down, sum_op), i| {
                 (
                     sum_down + (t_avg[i - 1] - t[1]) * ems[i - 1] * f32::exp(sum_op),
@@ -79,7 +76,6 @@ pub(crate) fn atm_tran(inc: f32, t: &[f32], z: &[f32], tabs: &[f32]) -> (f32, f3
 
     let (sum_up, sum_op) =
         (1..=num_levels)
-            .into_iter()
             .rev()
             .fold((0., 0.), |(sum_up, sum_op), i| {
                 (
@@ -339,7 +335,6 @@ pub(crate) fn abh2o_rk_modified(p: f32, t: f32, pv: f32, freq: f32) -> f32 {
     let freq_sq = freq.powi(2);
 
     let sum: f64 = (0..NLINES_H2O)
-        .into_iter()
         .map(|i| {
             let f0sq = f0[i].powi(2);
             let ga = b3[i] * (pdry * tht.powf(b4[i]) + b5[i] * pwet * tht.powf(b6[i]));
