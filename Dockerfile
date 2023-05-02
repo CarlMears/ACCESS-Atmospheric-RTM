@@ -24,9 +24,9 @@
 FROM ghcr.io/pyo3/maturin:latest AS build
 
 COPY . .
-RUN maturin build --release -i "python3.10"
+RUN maturin build --release -i "python3.11"
 
-FROM docker.io/library/python:3.10-slim
+FROM docker.io/library/python:3.11-slim
 
 RUN python3 -m venv --upgrade-deps /root/venv
 
@@ -35,7 +35,7 @@ COPY --from=build \
     /io/target/wheels/*.whl \
     /root/
 
-RUN /root/venv/bin/pip3 install ./access_atmosphere-*-cp310-cp310-manylinux*.whl
+RUN /root/venv/bin/pip3 install ./access_atmosphere-*-cp311-cp311-manylinux*.whl
 ENTRYPOINT [ "/root/venv/bin/python3" ]
 
 ARG version
