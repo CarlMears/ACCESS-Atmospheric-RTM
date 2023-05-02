@@ -4,7 +4,7 @@ requires = ["maturin>=0.14,<0.15"]
 
 [project]
 name = "access-atmosphere"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 
 dependencies = [
   "cdsapi",

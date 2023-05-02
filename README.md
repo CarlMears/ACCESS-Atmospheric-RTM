@@ -15,7 +15,7 @@ The RTM is implemented in Rust and compiled into a Python extension using
 
 Following the [NumPy policy of supported Python
 versions](https://numpy.org/neps/nep-0029-deprecation_policy.html#drop-schedule),
-Python 3.8 is the minimum version supported.
+Python 3.9 is the minimum version supported.
 
 ## Building
 
@@ -60,9 +60,9 @@ maturin develop --features abi3
 Alternately, the GitLab CI automatically builds wheels. The built wheels are:
 
 - x86_64 [manylinux](https://github.com/pypa/manylinux) wheels specifically for
-  Python versions 3.8 through 3.10
-- x86_64 manylinux abi3 wheel for Python 3.8 and later
-- x86_64 Windows abi3 wheel for Python 3.8 and later
+  Python versions 3.9 through 3.11
+- x86_64 manylinux abi3 wheel for Python 3.9 and later
+- x86_64 Windows abi3 wheel for Python 3.9 and later
 
 The wheels can be downloaded as CI job artifacts, and for every release, are
 generated and saved in the [local package
