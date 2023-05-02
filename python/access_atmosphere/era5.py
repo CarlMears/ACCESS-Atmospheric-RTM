@@ -1,7 +1,8 @@
 """Read ERA5 daily surface and profile data."""
 
+from collections.abc import Sequence
 from pathlib import Path
-from typing import NamedTuple, Optional, Sequence, Union, cast
+from typing import NamedTuple, Optional, Union, cast
 
 import numpy as np
 from netCDF4 import Dataset

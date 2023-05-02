@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Download the necessary ERA5 data to run the atmospheric RTM.
 
 The ERA5 datasets:

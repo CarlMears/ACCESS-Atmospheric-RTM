@@ -1,7 +1,7 @@
 import nox
 
 # By default just run these basic lint jobs
-nox.options.sessions = ["black", "flake8", "mypy"]
+nox.options.sessions = ["black", "ruff", "mypy"]
 
 
 @nox.session
@@ -12,10 +12,18 @@ def black(session: nox.Session) -> None:
 
 
 @nox.session
-def flake8(session: nox.Session) -> None:
-    """Run flake8"""
-    session.install("flake8", "flake8-docstrings", "flake8-import-order")
-    session.run("flake8", "--count", "python/")
+def ruff(session: nox.Session) -> None:
+    """Run ruff"""
+    session.install("ruff")
+    session.run("ruff", "check", "python/")
+
+
+@nox.session
+def ruff_full(session: nox.Session) -> None:
+    """Run ruff and generate a JUnit report file"""
+    session.install("ruff")
+    with open("ruff.junit.xml", "wb") as f:
+        session.run("ruff", "check", "--quiet", "--format=junit", "python/", stdout=f)
 
 
 @nox.session

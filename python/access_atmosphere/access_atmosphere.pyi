@@ -1,4 +1,4 @@
-from typing import final, Optional
+from typing import Optional, final
 
 import numpy as np
 from numpy.typing import NDArray

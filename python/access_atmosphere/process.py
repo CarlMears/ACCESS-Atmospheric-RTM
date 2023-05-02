@@ -12,11 +12,12 @@ python -m access_atmosphere.process \
 
 import argparse
 import sys
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter_ns
-from typing import Optional, Sequence, Union
+from typing import Optional, Union
 
 import numpy as np
 from netCDF4 import Dataset, getlibversion, num2date
