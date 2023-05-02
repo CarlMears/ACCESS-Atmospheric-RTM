@@ -60,29 +60,24 @@ pub(crate) fn atm_tran(inc: f32, t: &[f32], z: &[f32], tabs: &[f32]) -> (f32, f3
     let opacity: SmallVec<[f32; 64]> = (1..=num_levels)
         .map(|i| -dsdh * 0.5 * (tabs[i - 1] + tabs[i]) * (z[i] - z[i - 1]))
         .collect();
-    let t_avg: SmallVec<[f32; 64]> = (1..=num_levels)
-        .map(|i| 0.5 * (t[i - 1] + t[i]))
-        .collect();
+    let t_avg: SmallVec<[f32; 64]> = (1..=num_levels).map(|i| 0.5 * (t[i - 1] + t[i])).collect();
     let ems: SmallVec<[f32; 64]> = opacity.iter().map(|opacity| 1.0 - opacity.exp()).collect();
 
-    let (sum_down, _sum_op) =
-        (1..=num_levels)
-            .fold((0., 0.), |(sum_down, sum_op), i| {
-                (
-                    sum_down + (t_avg[i - 1] - t[1]) * ems[i - 1] * f32::exp(sum_op),
-                    sum_op + opacity[i - 1],
-                )
-            });
+    let (sum_down, _sum_op) = (1..=num_levels).fold((0., 0.), |(sum_down, sum_op), i| {
+        (
+            sum_down + (t_avg[i - 1] - t[1]) * ems[i - 1] * f32::exp(sum_op),
+            sum_op + opacity[i - 1],
+        )
+    });
 
-    let (sum_up, sum_op) =
-        (1..=num_levels)
-            .rev()
-            .fold((0., 0.), |(sum_up, sum_op), i| {
-                (
-                    sum_up + (t_avg[i - 1] - t[1]) * ems[i - 1] * f32::exp(sum_op),
-                    sum_op + opacity[i - 1],
-                )
-            });
+    let (sum_up, sum_op) = (1..=num_levels)
+        .rev()
+        .fold((0., 0.), |(sum_up, sum_op), i| {
+            (
+                sum_up + (t_avg[i - 1] - t[1]) * ems[i - 1] * f32::exp(sum_op),
+                sum_op + opacity[i - 1],
+            )
+        });
 
     let tran = sum_op.exp();
     let tb_avg = (1. - tran) * t[1];
