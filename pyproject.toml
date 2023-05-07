@@ -1,6 +1,6 @@
 [build-system]
 build-backend = "maturin"
-requires = ["maturin>=0.14,<0.15"]
+requires = ["maturin>=0.15,<0.16"]
 
 [project]
 name = "access-atmosphere"
