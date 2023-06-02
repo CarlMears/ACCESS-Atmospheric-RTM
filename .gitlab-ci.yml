@@ -56,7 +56,7 @@ stubtest:
 rustfmt:
   stage: test
   needs: []
-  image: rust:1.69-bullseye
+  image: rust:1.70-bullseye
   before_script:
     - rustup component add rustfmt
   script:
@@ -65,7 +65,7 @@ rustfmt:
 rust-tests:
   stage: test
   needs: []
-  image: rust:1.69-bullseye
+  image: rust:1.70-bullseye
   variables:
     CARGO_INCREMENTAL: "0"
   script:
@@ -88,7 +88,7 @@ build-manylinux:
 
 build-windows:
   stage: build
-  image: rust:1.69-bullseye
+  image: rust:1.70-bullseye
   variables:
     CARGO_INCREMENTAL: "0"
   before_script:

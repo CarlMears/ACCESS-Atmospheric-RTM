@@ -1,7 +1,9 @@
 [package]
-edition = "2021"
 name = "access-atmosphere"
 version = "0.3.0"
+
+edition = "2021"
+rust-version = "1.70"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
