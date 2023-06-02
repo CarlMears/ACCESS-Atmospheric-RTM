@@ -3,8 +3,8 @@
 //! These are pretty directly re-written from the original Fortran source.
 
 use num_complex::Complex32;
-use once_cell::sync::OnceCell;
 use smallvec::SmallVec;
+use std::sync::OnceLock;
 
 const NLINES_O2: usize = 44;
 
@@ -19,7 +19,7 @@ struct OxygenCoefficients {
 }
 
 /// Oxygen absorption coefficients
-static O2_COEF: OnceCell<OxygenCoefficients> = OnceCell::new();
+static O2_COEF: OnceLock<OxygenCoefficients> = OnceLock::new();
 
 const NLINES_H2O: usize = 15;
 
@@ -34,7 +34,7 @@ struct WaterVaporCoefficients {
 }
 
 /// Water vapor absorption coefficients
-static H2O_COEF: OnceCell<WaterVaporCoefficients> = OnceCell::new();
+static H2O_COEF: OnceLock<WaterVaporCoefficients> = OnceLock::new();
 
 /// Compute total atmospheric parameters from level data.
 ///
