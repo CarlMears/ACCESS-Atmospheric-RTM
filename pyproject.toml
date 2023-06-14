@@ -66,4 +66,4 @@ target-version = "py39"
 # "Missing docstring in public module", "public class", "public method", and
 # "public function" conflicts with PYI021, "Docstrings should not be included in
 # stubs".
-"*.pyi" = ["D100", "D101", "D102", "D103"]
+"*.pyi" = ["D100", "D101", "D102", "D103", "PYI053"]
