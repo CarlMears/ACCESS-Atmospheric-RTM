@@ -95,6 +95,28 @@ build-manylinux:
       - "*.tar.gz"
       - "*.whl"
 
+build-musllinux:
+  stage: build
+  image: quay.io/pypa/musllinux_1_1_x86_64:latest
+  variables:
+    CARGO_INCREMENTAL: "0"
+  before_script:
+    - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain 1.70 --profile minimal -y
+    - source $HOME/.cargo/env
+    - python3.11 -m venv --upgrade-deps venv
+    - source venv/bin/activate
+    - pip install maturin
+    - rustup --version
+    - maturin --version
+  script:
+    - cargo fetch --locked
+    - maturin build --release --features abi3
+    - maturin build --release -i "python3.9" -i "python3.10" -i "python3.11"
+    - cp target/wheels/*.whl .
+  artifacts:
+    paths:
+      - "*.whl"
+
 build-windows:
   stage: build
   image: rust:1.70-bookworm
@@ -132,7 +154,7 @@ import-linux:
 publish-package:
   stage: deploy
   image: python:3.11-slim
-  needs: ["build-windows", "build-manylinux"]
+  needs: ["build-windows", "build-manylinux", "build-musllinux"]
   # Once a package version is uploaded to a PyPI registry, it cannot be updated.
   # So to ensure no conflicts, only tagged releases are published.
   only:
@@ -147,7 +169,7 @@ publish-package:
       TWINE_PASSWORD=${CI_JOB_TOKEN}
       python -m twine upload
       --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi
-      *.tar.gz *manylinux*.whl *win*.whl
+      *.tar.gz *manylinux*.whl *musllinux*.whl *win*.whl
 
 api-documentation:
   stage: test
