@@ -2,6 +2,10 @@ include:
   - template: Security/SAST.gitlab-ci.yml
   - template: Security/Secret-Detection.gitlab-ci.yml
 
+variables:
+  CARGO_INCREMENTAL: "0"
+  CARGO_TERM_COLOR: "always"
+
 lint:
   stage: test
   needs: []
@@ -66,16 +70,12 @@ rust-tests:
   stage: test
   needs: []
   image: rust:1.70-bookworm
-  variables:
-    CARGO_INCREMENTAL: "0"
   script:
     - cargo test --locked
 
 build-manylinux:
   stage: build
   image: quay.io/pypa/manylinux2014_x86_64:latest
-  variables:
-    CARGO_INCREMENTAL: "0"
   before_script:
     - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain 1.70 --profile minimal -y
     - source $HOME/.cargo/env
@@ -91,6 +91,7 @@ build-manylinux:
     - maturin build --release -i "python3.9" -i "python3.10" -i "python3.11"
     - cp -t . target/wheels/*.tar.gz target/wheels/*.whl
   artifacts:
+    name: "$CI_JOB_NAME-$CI_COMMIT_SHORT_SHA"
     paths:
       - "*.tar.gz"
       - "*.whl"
@@ -98,8 +99,6 @@ build-manylinux:
 build-musllinux:
   stage: build
   image: quay.io/pypa/musllinux_1_1_x86_64:latest
-  variables:
-    CARGO_INCREMENTAL: "0"
   before_script:
     - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain 1.70 --profile minimal -y
     - source $HOME/.cargo/env
@@ -114,14 +113,13 @@ build-musllinux:
     - maturin build --release -i "python3.9" -i "python3.10" -i "python3.11"
     - cp target/wheels/*.whl .
   artifacts:
+    name: "$CI_JOB_NAME-$CI_COMMIT_SHORT_SHA"
     paths:
       - "*.whl"
 
 build-windows:
   stage: build
   image: rust:1.70-bookworm
-  variables:
-    CARGO_INCREMENTAL: "0"
   before_script:
     - echo -e "section_start:$(date +%s):apt-get\r\e[0KInstalling dependencies"
     - export LANG="C.UTF-8"
@@ -137,6 +135,7 @@ build-windows:
     - maturin build --release --target x86_64-pc-windows-gnu --features abi3
     - cp -t . target/wheels/*.whl
   artifacts:
+    name: "$CI_JOB_NAME-$CI_COMMIT_SHORT_SHA"
     paths:
       - "*.whl"
 
@@ -148,7 +147,7 @@ import-linux:
     - python --version
     - pip install --upgrade pip
   script:
-    - pip install --progress-bar=off ./access_atmosphere-*-cp311-cp311-*.whl
+    - pip install --progress-bar=off ./access_atmosphere-*-cp311-cp311-manylinux*.whl
     - python -c 'import access_atmosphere'
 
 publish-package:
@@ -180,7 +179,7 @@ api-documentation:
     - pip install --upgrade pip
     - pip install nox
   script:
-    - nox -s pdoc -- access_atmosphere-*-cp39-cp39-*.whl
+    - nox -s pdoc -- access_atmosphere-*-cp39-cp39-manylinux*.whl
   artifacts:
     paths:
       - public
