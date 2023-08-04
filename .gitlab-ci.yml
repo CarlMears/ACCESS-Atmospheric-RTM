@@ -195,3 +195,25 @@ pages:
   artifacts:
     paths:
       - public
+
+# This is a temporary job to create musllinux wheels for the netCDF4/cftime
+# packages since they're not published on PyPI yet
+dependency-musllinux-wheels:
+  stage: deploy
+  needs: []
+  when: manual
+  parallel:
+    matrix:
+      - PYTHON: [python3.9, python3.10, python3.11]
+  image: quay.io/pypa/musllinux_1_2_x86_64:latest
+  before_script:
+    - apk add hdf5-dev netcdf-dev
+  script:
+    - ${PYTHON} -m pip wheel netCDF4
+    - auditwheel repair netCDF4-*-linux_x86_64.whl cftime-*-linux_x86_64.whl
+    - cp wheelhouse/*.whl .
+  artifacts:
+    name: "$CI_JOB_NAME-$CI_COMMIT_SHORT_SHA"
+    paths:
+      - "netCDF4-*-musllinux_1_2_x86_64.whl"
+      - "cftime-*-musllinux_1_2_x86_64.whl"
