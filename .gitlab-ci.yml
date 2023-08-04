@@ -98,7 +98,7 @@ build-manylinux:
 
 build-musllinux:
   stage: build
-  image: quay.io/pypa/musllinux_1_1_x86_64:latest
+  image: quay.io/pypa/musllinux_1_2_x86_64:latest
   before_script:
     - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain 1.70 --profile minimal -y
     - source $HOME/.cargo/env
