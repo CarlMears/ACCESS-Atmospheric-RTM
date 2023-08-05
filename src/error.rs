@@ -7,6 +7,8 @@ pub enum RtmError {
     NoSurface,
     /// An array is not contiguous when it was assumed to be
     NotContiguous,
+    /// The operation was aborted early
+    Cancelled,
 }
 
 impl std::fmt::Display for RtmError {
@@ -19,6 +21,7 @@ impl std::fmt::Display for RtmError {
                 write!(f, "couldn't find the surface index")
             }
             RtmError::NotContiguous => write!(f, "array slice not contiguous in memory"),
+            RtmError::Cancelled => write!(f, "operation cancelled early"),
         }
     }
 }
