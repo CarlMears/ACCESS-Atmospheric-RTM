@@ -1,5 +1,6 @@
 """Read ERA5 daily surface and profile data."""
 
+import logging
 from collections.abc import Sequence
 from pathlib import Path
 from typing import NamedTuple, Optional, Union, cast
@@ -99,16 +100,14 @@ def read_era5_data(
     surface_file: Path,
     levels_file: Path,
     time_subset: Optional[Sequence[int]] = None,
-    verbose: bool = False,
 ) -> Era5DailyData:
     """Read the pair of ERA5 surface/levels files.
 
     Optionally, a subset of the time values can be read.
     """
-    if verbose:
-        print(f"Reading surface data: {surface_file}")
-        if time_subset is not None:
-            print(f"Subsetting hour indices to: {time_subset}")
+    logging.info(f"Reading surface data: {surface_file}")
+    if time_subset is not None:
+        logging.info(f"Subsetting hour indices to: {time_subset}")
 
     times: Union[slice, Sequence[int]]
     if time_subset is None:
@@ -130,8 +129,7 @@ def read_era5_data(
         columnar_water_vapor = f["tcwv"][times, :, :].astype(np.float32)
         columnar_cloud_liquid = f["tclw"][times, :, :].astype(np.float32)
 
-    if verbose:
-        print(f"Reading profiles data: {levels_file}")
+    logging.info(f"Reading profiles data: {levels_file}")
     with Dataset(levels_file, "r") as f:
         # TODO: Probably the lats/lons/time coordinate variables should be
         # checked to ensure the levels file matches the surface file...but for
@@ -142,8 +140,7 @@ def read_era5_data(
         height = f["z"][times, :, :, :].astype(np.float32)
         liquid_content = f["clwc"][times, :, :, :].astype(np.float32)
 
-    if verbose:
-        print(f"Post-processing ERA5 data ({len(levels)} pressure levels)")
+    logging.info(f"Post-processing ERA5 data ({len(levels)} pressure levels)")
 
     # By default, netCDF4 returns masked arrays for all the variables above.
     # However, there shouldn't be any values that are actually masked in the
