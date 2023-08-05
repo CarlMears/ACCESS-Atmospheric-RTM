@@ -3,7 +3,7 @@
 import logging
 from collections.abc import Sequence
 from pathlib import Path
-from typing import NamedTuple, Optional, Union, cast
+from typing import NamedTuple, Optional, Union
 
 import numpy as np
 from netCDF4 import Dataset
@@ -74,10 +74,7 @@ def buck_vap(temperature: NDArray[np.float32]) -> NDArray[np.float32]:
     """
     # Temperature in degrees Celsius
     temp_c: NDArray[np.float32] = temperature - 273.15
-    return cast(
-        NDArray[np.float32],
-        6.1121 * np.exp((18.678 - temp_c / 234.5) * (temp_c / (257.14 + temp_c))),
-    )
+    return 6.1121 * np.exp((18.678 - temp_c / 234.5) * (temp_c / (257.14 + temp_c)))
 
 
 def read_time_indices(surface_file: Path, levels_file: Path) -> list[int]:
