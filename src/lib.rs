@@ -12,6 +12,7 @@ pub(crate) mod error;
 pub(crate) mod rtm;
 
 use error::RtmError;
+use log::{debug, info};
 use ndarray::{Array2, ArrayView1, Axis};
 use numpy::{PyArray2, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
 use pyo3::exceptions::PyValueError;
@@ -157,6 +158,7 @@ fn compute_rtm(
             return Err(RtmError::InconsistentInputs.into());
         }
     }
+    debug!("input shapes are consistent");
 
     let parameters = RtmParameters::new(frequency.as_slice()?, incidence_angle.as_slice()?)?;
 
@@ -178,6 +180,7 @@ fn compute_rtm(
         .build()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
 
+    info!("Processing RTM for {num_points} points");
     py.allow_threads(|| {
         pool.install(|| {
             (0..num_points)
@@ -216,6 +219,7 @@ fn compute_rtm(
     py.check_signals()?;
 
     // Copy the intermediate results to the output arrays
+    debug!("copying RTM output");
     let mut output = AtmoParameters::new(num_points, num_freq);
     results
         .into_iter()
@@ -245,6 +249,8 @@ fn compute_rtm(
 /// A Python module implemented in Rust.
 #[pymodule]
 fn access_atmosphere(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
+    pyo3_log::init();
+
     m.add_function(wrap_pyfunction!(compute_rtm, m)?)?;
     m.add_class::<AtmoParameters>()?;
     Ok(())

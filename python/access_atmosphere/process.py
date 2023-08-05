@@ -363,11 +363,14 @@ def main() -> None:
     # Set up logging
     if args.quiet:
         log_level = logging.WARNING
+        log_fmt = "{asctime} {levelname} {message}"
     elif args.verbose:
         log_level = logging.DEBUG
+        log_fmt = "{asctime} {levelname} ({filename}:{lineno}) {message}"
     else:
         log_level = logging.INFO
-    log_fmt = "{asctime} {levelname}: {module}.{funcName} {message}"
+        log_fmt = "{asctime} {levelname} {message}"
+
     log_datefmt = "%Y-%m-%d %H:%M:%S%z"
     logging.basicConfig(style="{", format=log_fmt, datefmt=log_datefmt, level=log_level)
 
