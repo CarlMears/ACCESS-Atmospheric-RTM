@@ -13,10 +13,6 @@ tasks:
 The RTM is implemented in Rust and compiled into a Python extension using
 [maturin](https://maturin.rs/) and [pyo3](https://pyo3.rs/).
 
-Following the [NumPy policy of supported Python
-versions](https://numpy.org/neps/nep-0029-deprecation_policy.html#drop-schedule),
-Python 3.9 is the minimum version supported.
-
 ## Installing
 
 The `access-atmosphere` Python package is available on the GitLab-hosted PyPI
@@ -44,8 +40,31 @@ pip install access-atmosphere `
   --trusted-host gitlab.remss.com
 ```
 
-Wheels are built for Linux (`manylinux_2_17`) and Windows for x86-64 for Python
-3.9 and newer.
+Wheels are built for Linux and Windows for x86-64 for Python 3.9 and newer. The
+Linux wheels are built in two flavors: `manylinux_2_17`, which is for most
+common Linux distributions using the GNU C library 2.17 or greater, and
+`musllinux_1_2`, which is for Linux distributions using the musl C library 1.2
+or greater. For example, use the `manylinux` wheel for Debian but the
+`musllinux` wheel for Alpine.
+
+### Alpine instructions
+
+The `musllinux_1_2` wheel works in Alpine Linux. However, the Python
+[`netCDF4`](https://github.com/Unidata/netcdf4-python/) and `cftime` packages
+are runtime dependencies and `musllinux` wheels are not yet available on PyPI.
+For convenience, until they're available, GitLab CI jobs automatically build
+`musllinux_1_2` wheels for these two dependencies as well. To install the
+project within an Alpine container, such as
+[`docker.io/library/python:3.11-alpine`](https://hub.docker.com/_/python):
+
+```sh
+# Copy in or download the relevant wheels and then install them
+$ pip install \
+  access_atmosphere-0.3.0-cp311-cp311-musllinux_1_2_x86_64.whl \
+  netCDF4-1.6.4-cp311-cp311-musllinux_1_2_x86_64.whl \
+  cftime-1.6.2-cp311-cp311-musllinux_1_2_x86_64.whl
+$ python -m access_atmosphere.process ...
+```
 
 ## Building (for development)
 
@@ -87,17 +106,36 @@ maturin build --release --features abi3
 maturin develop --features abi3
 ```
 
-Alternately, the GitLab CI automatically builds wheels. The built wheels are:
+Alternately, the GitLab CI automatically builds wheels. Python wheels end with
+the following: `-{python tag}-{abitag}-{platform tag}.whl`. The built wheels
+have the following possible values for the tags (though not with every
+combination):
 
-- x86_64 [manylinux_2_17](https://github.com/pypa/manylinux) wheels specifically
-  for Python versions 3.9 through 3.11
-- x86_64 manylinux_2_17 abi3 wheel for Python 3.9 and later
-- x86_64 Windows abi3 wheel for Python 3.9 and later
+| Python tag | Description |
+| --- | --- |
+| `cp39` | CPython 3.9 |
+| `cp310` | CPython 3.10 |
+| `cp311` | CPython 3.11 |
 
-The `manylinux_2_17` (aka `manylinux2014`) policy ensures that it is compatible
-with [most Linux distributions](https://github.com/mayeut/pep600_compliance)
-dating from CentOS 7 or newer. This also matches the minimum requirements
-starting with [Rust
+| Abi tag | Description |
+| --- | --- |
+| (same as Python tag) | Exactly the Python minor version |
+| `abi3` | The Python minor version or higher |
+
+| Platform tag | Description |
+| --- | --- |
+| `win_amd64` | x86_64 Windows |
+| `manylinux_2_17_x86_64` | x86_64 Linux with glibc 2.17 and later |
+| `musllinux_1_2_x86_64` | x86_64 Linux with musl 1.2 and later |
+
+Following the [NumPy policy of supported Python
+versions](https://numpy.org/neps/nep-0029-deprecation_policy.html#drop-schedule),
+Python 3.9 is the minimum version used.
+
+The [`manylinux_2_17`](https://github.com/pypa/manylinux) (aka `manylinux2014`)
+policy ensures that it is compatible with [most Linux
+distributions](https://github.com/mayeut/pep600_compliance) dating from CentOS 7
+or newer. This also matches the minimum requirements starting with [Rust
 1.64](https://blog.rust-lang.org/2022/08/01/Increasing-glibc-kernel-requirements.html).
 
 The wheels can be downloaded as CI job artifacts, and for every release, are
