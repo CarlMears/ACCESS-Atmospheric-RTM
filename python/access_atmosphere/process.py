@@ -11,6 +11,7 @@ python -m access_atmosphere.process \
 """
 
 import argparse
+import logging
 import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -233,12 +234,10 @@ def combine_rtm(hourly: Sequence[RtmDailyData]) -> RtmDailyData:
 
 
 def run_rtm(
-    era5_data: era5.Era5DailyData, verbose: bool = False, workers: Optional[int] = None
+    era5_data: era5.Era5DailyData, workers: Optional[int] = None
 ) -> RtmDailyData:
     """Run the RTM on ERA5 daily data."""
-    if verbose:
-        print("Running RTM over all data")
-
+    logging.info("Running RTM over all data")
     tick = perf_counter_ns()
 
     # The ERA5 data is organized by lat/lon, but we need to vectorize that down
@@ -263,8 +262,7 @@ def run_rtm(
 
     tock = perf_counter_ns()
     duration_seconds = (tock - tick) * 1e-9
-    if verbose:
-        print(f"Finished RTM in {duration_seconds:0.2f} s")
+    logging.info(f"Finished RTM in {duration_seconds:0.2f} s")
 
     # Now the output values need to be un-vectorized
     num_freq = len(REF_FREQ)
@@ -292,7 +290,6 @@ def convert_all(
     rtm_output: Path,
     time_indices: Optional[Sequence[int]],
     one_pass: bool,
-    verbose: bool = False,
     workers: Optional[int] = None,
 ) -> None:
     """Read the ERA5 profile/surface files and run the RTM and write its output."""
@@ -304,27 +301,27 @@ def convert_all(
 
     if one_pass:
         era5_data = era5.read_era5_data(
-            era5_surface_input, era5_levels_input, all_time_indices, verbose=verbose
+            era5_surface_input, era5_levels_input, all_time_indices
         )
-        rtm_data = run_rtm(era5_data, verbose, workers)
+        rtm_data = run_rtm(era5_data, workers)
     else:
         # Read the ERA5 data one hour at a time and process just that much
         hourly_rtm_data = []
         for time_index in all_time_indices:
             era5_data = era5.read_era5_data(
-                era5_surface_input, era5_levels_input, [time_index], verbose=verbose
+                era5_surface_input, era5_levels_input, [time_index]
             )
-            hourly_rtm_data.append(run_rtm(era5_data, verbose, workers))
+            hourly_rtm_data.append(run_rtm(era5_data, workers))
 
         # Accumulate all the hourly data together
         rtm_data = combine_rtm(hourly_rtm_data)
 
-    if verbose:
-        print(f"Writing output data: {rtm_output}")
+    logging.info(f"Writing output data: {rtm_output}")
     rtm_data.write_nc(rtm_output)
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Parse arguments and run the processing."""
     parser = argparse.ArgumentParser(description="Run the RTM on one day of ERA5 data")
     parser.add_argument("era5_surface", type=Path, help="ERA5 surface data for one day")
     parser.add_argument("era5_levels", type=Path, help="ERA5 levels data for one day")
@@ -356,23 +353,45 @@ if __name__ == "__main__":
             "the number of detected logical CPUs."
         ),
     )
+    verb_group = parser.add_mutually_exclusive_group()
+    verb_group.add_argument("--quiet", "-q", action="store_true", help="Reduce output")
+    verb_group.add_argument(
+        "--verbose", "-v", action="store_true", help="Increase output"
+    )
     args = parser.parse_args()
 
-    print(f"ERA5 surface file: {args.era5_surface}")
-    print(f"ERA5 levels file: {args.era5_levels}")
-    print(f"RTM output file: {args.rtm_out}")
-    if args.one_pass:
-        print("One-pass mode enabled")
-    if args.workers:
-        print(f"Worker threads: {args.workers}")
+    # Set up logging
+    if args.quiet:
+        log_level = logging.WARNING
+        log_fmt = "{asctime} {levelname} {message}"
+    elif args.verbose:
+        log_level = logging.DEBUG
+        log_fmt = "{asctime} {levelname} ({filename}:{lineno}) {message}"
     else:
-        print("Worker threads: (automatic)")
+        log_level = logging.INFO
+        log_fmt = "{asctime} {levelname} {message}"
+
+    log_datefmt = "%Y-%m-%d %H:%M:%S%z"
+    logging.basicConfig(style="{", format=log_fmt, datefmt=log_datefmt, level=log_level)
+
+    logging.info(f"ERA5 surface file: {args.era5_surface}")
+    logging.info(f"ERA5 levels file: {args.era5_levels}")
+    logging.info(f"RTM output file: {args.rtm_out}")
+    if args.one_pass:
+        logging.info("One-pass mode enabled")
+    if args.workers:
+        logging.info(f"Worker threads: {args.workers}")
+    else:
+        logging.info("Worker threads: (automatic)")
     convert_all(
         args.era5_surface,
         args.era5_levels,
         args.rtm_out,
         args.time,
         args.one_pass,
-        verbose=True,
         workers=args.workers,
     )
+
+
+if __name__ == "__main__":
+    main()

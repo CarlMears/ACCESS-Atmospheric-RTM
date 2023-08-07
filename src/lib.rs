@@ -11,7 +11,13 @@
 pub(crate) mod error;
 pub(crate) mod rtm;
 
+use std::{
+    sync::atomic::{AtomicBool, AtomicUsize, Ordering},
+    time::Duration,
+};
+
 use error::RtmError;
+use log::{debug, info};
 use ndarray::{Array2, ArrayView1, Axis};
 use numpy::{PyArray2, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
 use pyo3::exceptions::PyValueError;
@@ -25,6 +31,7 @@ impl From<RtmError> for PyErr {
             RtmError::InconsistentInputs => PyValueError::new_err(e.to_string()),
             RtmError::NoSurface => PyValueError::new_err(e.to_string()),
             RtmError::NotContiguous => PyValueError::new_err(e.to_string()),
+            RtmError::Cancelled => PyValueError::new_err(e.to_string()),
         }
     }
 }
@@ -157,6 +164,7 @@ fn compute_rtm(
             return Err(RtmError::InconsistentInputs.into());
         }
     }
+    debug!("input shapes are consistent");
 
     let parameters = RtmParameters::new(frequency.as_slice()?, incidence_angle.as_slice()?)?;
 
@@ -178,11 +186,22 @@ fn compute_rtm(
         .build()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
 
-    py.allow_threads(|| {
-        pool.install(|| {
+    // These atomics keep track of how many points have finished and whether
+    // it's time to cancel the computation or now
+    let num_completed = AtomicUsize::new(0);
+    let cancelled = AtomicBool::new(false);
+
+    info!("Processing RTM for {num_points} points");
+
+    pool.in_place_scope(|s| -> Result<(), PyErr> {
+        s.spawn(|_| {
             (0..num_points)
                 .into_par_iter()
                 .map(|point| -> Result<_, RtmError> {
+                    if cancelled.load(Ordering::Relaxed) {
+                        return Err(RtmError::Cancelled);
+                    }
+
                     let rtm_input = RtmInputs::new(
                         pressure,
                         surface_temperature[point],
@@ -209,13 +228,40 @@ fn compute_rtm(
 
                     Ok(rtm_input.run(&parameters))
                 })
+                .inspect(|_| {
+                    num_completed.fetch_add(1, Ordering::Relaxed);
+                })
                 .collect_into_vec(&mut results);
         });
-    });
 
-    py.check_signals()?;
+        // The work is done in the thread pool, but back here in the main
+        // thread, handle progress reporting and checking for early
+        // cancellation
+        while !cancelled.load(Ordering::Relaxed) {
+            if let Err(e) = py.check_signals() {
+                cancelled.store(true, Ordering::Relaxed);
+                return Err(e);
+            }
+
+            let num_completed = num_completed.load(Ordering::Relaxed);
+            let progress = num_completed as f32 / num_points as f32 * 100.;
+            info!("Completed RTM points {num_completed}/{num_points} ({progress:0.2}%)");
+
+            // All finished without cancelling early
+            if num_completed == num_points {
+                break;
+            }
+
+            py.allow_threads(|| {
+                std::thread::sleep(Duration::from_secs(5));
+            });
+        }
+
+        Ok(())
+    })?;
 
     // Copy the intermediate results to the output arrays
+    debug!("copying RTM output");
     let mut output = AtmoParameters::new(num_points, num_freq);
     results
         .into_iter()
@@ -245,6 +291,8 @@ fn compute_rtm(
 /// A Python module implemented in Rust.
 #[pymodule]
 fn access_atmosphere(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
+    pyo3_log::init();
+
     m.add_function(wrap_pyfunction!(compute_rtm, m)?)?;
     m.add_class::<AtmoParameters>()?;
     Ok(())
