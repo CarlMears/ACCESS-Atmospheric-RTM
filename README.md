@@ -60,7 +60,7 @@ project within an Alpine container, such as
 ```sh
 # Copy in or download the relevant wheels and then install them
 $ pip install \
-  access_atmosphere-0.3.0-cp311-cp311-musllinux_1_2_x86_64.whl \
+  access_atmosphere-0.3.1-cp311-cp311-musllinux_1_2_x86_64.whl \
   netCDF4-1.6.4-cp311-cp311-musllinux_1_2_x86_64.whl \
   cftime-1.6.2-cp311-cp311-musllinux_1_2_x86_64.whl
 $ python -m access_atmosphere.process ...
