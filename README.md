@@ -41,8 +41,8 @@ pip install access-atmosphere `
 ```
 
 Wheels are built for Linux and Windows for x86-64 for Python 3.9 and newer. The
-Linux wheels are built in two flavors: `manylinux_2_17`, which is for most
-common Linux distributions using the GNU C library 2.17 or greater, and
+Linux wheels are built in two flavors: `manylinux_2_28`, which is for most
+common Linux distributions using the GNU C library 2.28 or greater, and
 `musllinux_1_2`, which is for Linux distributions using the musl C library 1.2
 or greater. For example, use the `manylinux` wheel for Debian but the
 `musllinux` wheel for Alpine.
@@ -126,18 +126,17 @@ combination):
 | Platform tag | Description |
 | --- | --- |
 | `win_amd64` | x86_64 Windows |
-| `manylinux_2_17_x86_64` | x86_64 Linux with glibc 2.17 and later |
+| `manylinux_2_28_x86_64` | x86_64 Linux with glibc 2.28 and later |
 | `musllinux_1_2_x86_64` | x86_64 Linux with musl 1.2 and later |
 
 Following the [NumPy policy of supported Python
 versions](https://numpy.org/neps/nep-0029-deprecation_policy.html#drop-schedule),
 Python 3.9 is the minimum version used.
 
-The [`manylinux_2_17`](https://github.com/pypa/manylinux) (aka `manylinux2014`)
-policy ensures that it is compatible with [most Linux
-distributions](https://github.com/mayeut/pep600_compliance) dating from CentOS 7
-or newer. This also matches the minimum requirements starting with [Rust
-1.64](https://blog.rust-lang.org/2022/08/01/Increasing-glibc-kernel-requirements.html).
+The [`manylinux_2_28`](https://github.com/pypa/manylinux) policy ensures that it
+is compatible with [most Linux
+distributions](https://github.com/mayeut/pep600_compliance) starting in about
+2019, for example Debian buster and Red Hat Enterprise Linux 8.
 
 The wheels can be downloaded as CI job artifacts, and for every release, are
 generated and saved in the [local package
