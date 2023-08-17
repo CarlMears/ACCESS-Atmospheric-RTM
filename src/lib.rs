@@ -187,7 +187,7 @@ fn compute_rtm(
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
 
     // These atomics keep track of how many points have finished and whether
-    // it's time to cancel the computation or now
+    // it's time to cancel the computation or not
     let num_completed = AtomicUsize::new(0);
     let cancelled = AtomicBool::new(false);
 
