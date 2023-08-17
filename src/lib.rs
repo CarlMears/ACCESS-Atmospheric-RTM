@@ -191,7 +191,10 @@ fn compute_rtm(
     let num_completed = AtomicUsize::new(0);
     let cancelled = AtomicBool::new(false);
 
-    info!("Processing RTM for {num_points} points");
+    info!(
+        "Processing atmosphere RTM for {num_points} profiles and {num_freq} frequencies using {} threads",
+        pool.current_num_threads()
+    );
 
     pool.in_place_scope(|s| -> Result<(), PyErr> {
         s.spawn(|_| {
@@ -245,7 +248,7 @@ fn compute_rtm(
 
             let num_completed = num_completed.load(Ordering::Relaxed);
             let progress = num_completed as f32 / num_points as f32 * 100.;
-            info!("Completed RTM points {num_completed}/{num_points} ({progress:0.2}%)");
+            info!("Completed RTM for {num_completed}/{num_points} profiles ({progress:0.2}%)");
 
             // All finished without cancelling early
             if num_completed == num_points {
