@@ -24,19 +24,19 @@ pub struct RtmInputs {
     num_levels: NonZeroUsize,
     /// Starting index for the surface, aka `ibegin`.
     surface_index: usize,
-    /// Pressure profile in hPa. This has length `num_levels`+1 since the first
+    /// Pressure profile in hPa. This has length `num_levels+1` since the first
     /// element is for the surface.
     pressure: Vec<f32>,
-    /// Temperature profile in K. This has length `num_levels`+1 since the first
+    /// Temperature profile in K. This has length `num_levels+1` since the first
     /// element is for the surface.
     temperature: Vec<f32>,
-    /// Water vapor pressure profile in hPa. This has length `num_levels`+1 since the first
+    /// Water vapor pressure profile in hPa. This has length `num_levels+1` since the first
     /// element is for the surface.
     vapor_pressure: Vec<f32>,
-    /// Liquid water density in g/m^3. This has length `num_levels`+1 since the first
+    /// Liquid water density in g/m^3. This has length `num_levels+1` since the first
     /// element is for the surface.
     rho_l: Vec<f32>,
-    /// Geometric height in m. This has length `num_levels`+1 since the first
+    /// Geometric height in m. This has length `num_levels+1` since the first
     /// element is for the surface.
     height: Vec<f32>,
 }
