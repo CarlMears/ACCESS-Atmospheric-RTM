@@ -33,8 +33,8 @@ pub struct RtmInputs {
     /// Water vapor pressure profile in hPa. This has length `num_levels+1` since the first
     /// element is for the surface.
     vapor_pressure: Vec<f32>,
-    /// Liquid water density in g/m^3. This has length `num_levels+1` since the first
-    /// element is for the surface.
+    /// Liquid water density in g/m³. This has length `num_levels+1` since the
+    /// first element is for the surface.
     rho_l: Vec<f32>,
     /// Geometric height in m. This has length `num_levels+1` since the first
     /// element is for the surface.
