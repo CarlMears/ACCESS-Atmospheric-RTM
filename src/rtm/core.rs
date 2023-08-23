@@ -47,7 +47,7 @@ static H2O_COEF: OnceLock<WaterVaporCoefficients> = OnceLock::new();
 ///
 /// The three profile inputs (`t`, `z`, and `tabs`) all have the same length,
 /// `num_levels + 1`, where the first index `0` is the value at the surface and
-/// indices from `1..=num_levels` are profile data above the surface.
+/// indices from `1` to `num_levels` are profile data above the surface.
 pub(crate) fn atm_tran(inc: f32, t: &[f32], z: &[f32], tabs: &[f32]) -> (f32, f32, f32) {
     const DELTA: f32 = 0.00035;
 
@@ -390,7 +390,7 @@ pub(crate) fn abh2o_rk_modified(p: f32, t: f32, pv: f32, freq: f32) -> f32 {
 /// Liquid cloud water absorption coefficient.
 ///
 /// For a frequency `freq` in GHz, a temperature `t` in K, and a liquid cloud
-/// water density `rhol` in g/m^3, compute the cloud water absorption
+/// water density `rhol` in g/m³, compute the cloud water absorption
 /// coefficient in Np/km.
 pub(crate) fn fdcldabs(freq: f32, t: f32, rhol: f32) -> f32 {
     const C: f32 = 29.979;
@@ -452,7 +452,12 @@ fn meissner(freq: f32, t: f32, s: f32) -> Complex32 {
 /// - `s`: from 0 to 40 ppt
 ///
 ///
-/// References: T. Meissner  and F. Wentz, IEEE TGARS, 42(9), 2004, 1836-1849.
+/// # References
+///
+/// T. Meissner and F. J. Wentz, "The complex dielectric constant of pure and
+/// sea water from microwave satellite observations", in IEEE Transactions on
+/// Geoscience and Remote Sensing, vol. 42, no. 9, pp. 1836-1849, Sept. 2004,
+/// <https://doi.org/10.1109/TGRS.2004.831888>.
 fn dielectric_meissner_wentz(sst: f32, s: f32) -> (f32, f32, f32, f32, f32, f32) {
     #![allow(clippy::excessive_precision)]
     const X: [f32; 11] = [

@@ -33,8 +33,8 @@ pub struct RtmInputs {
     /// Water vapor pressure profile in hPa. This has length `num_levels+1` since the first
     /// element is for the surface.
     vapor_pressure: Vec<f32>,
-    /// Liquid water density in g/m^3. This has length `num_levels+1` since the first
-    /// element is for the surface.
+    /// Liquid water density in g/m³. This has length `num_levels+1` since the
+    /// first element is for the surface.
     rho_l: Vec<f32>,
     /// Geometric height in m. This has length `num_levels+1` since the first
     /// element is for the surface.
@@ -213,8 +213,8 @@ impl RtmInputs {
 
     /// Apply the RTM on the inputs for the given parameters.
     pub fn run(&self, parameters: &RtmParameters) -> RtmOutputs {
-        // Scaling factor to convert from dB/km to Np/km
-        let nep_scale = 0.1 * f32::ln(10.0);
+        /// Scaling factor to convert from dB/km to Np/km: `0.1 * ln(10)`
+        const NEP_SCALE: f32 = 0.1 * std::f32::consts::LN_10;
 
         let mut tran = SmallVec::new();
         let mut tb_up = SmallVec::new();
@@ -231,13 +231,13 @@ impl RtmInputs {
                         self.temperature[level_index],
                         self.vapor_pressure[level_index],
                         freq,
-                    ) * nep_scale;
+                    ) * NEP_SCALE;
                     let water = abh2o_rk_modified(
                         self.pressure[level_index],
                         self.temperature[level_index],
                         self.vapor_pressure[level_index],
                         freq,
-                    ) * nep_scale;
+                    ) * NEP_SCALE;
 
                     // Cloud absorption coefficient in Np/km
                     let cloud = if self.rho_l[level_index] > 1.0e-7 {
@@ -279,7 +279,7 @@ impl RtmInputs {
 /// To convert to water vapor partial pressure, multiply the result by the
 /// relative humidity.
 ///
-/// [1] https://en.wikipedia.org/wiki/Arden_Buck_equation
+/// [1]: https://en.wikipedia.org/wiki/Arden_Buck_equation
 fn buck_vap(temp: f32) -> f32 {
     // Temperature in degrees Celsius
     let temp_c = temp - 273.15;
