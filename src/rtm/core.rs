@@ -452,7 +452,12 @@ fn meissner(freq: f32, t: f32, s: f32) -> Complex32 {
 /// - `s`: from 0 to 40 ppt
 ///
 ///
-/// References: T. Meissner  and F. Wentz, IEEE TGARS, 42(9), 2004, 1836-1849.
+/// # References
+///
+/// T. Meissner and F. J. Wentz, "The complex dielectric constant of pure and
+/// sea water from microwave satellite observations", in IEEE Transactions on
+/// Geoscience and Remote Sensing, vol. 42, no. 9, pp. 1836-1849, Sept. 2004,
+/// <https://doi.org/10.1109/TGRS.2004.831888>.
 fn dielectric_meissner_wentz(sst: f32, s: f32) -> (f32, f32, f32, f32, f32, f32) {
     #![allow(clippy::excessive_precision)]
     const X: [f32; 11] = [
