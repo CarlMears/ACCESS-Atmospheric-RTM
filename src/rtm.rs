@@ -1,9 +1,15 @@
 //! Atmospheric radiative transfer model for the ACCESS project
 
 mod core;
+mod liquid_cloud;
+mod oxygen;
+mod water_vapor;
 
+#[cfg(test)]
+mod tests;
+
+use self::core::{atm_tran, layer_absorption};
 use crate::error::RtmError;
-use crate::rtm::core::{abh2o_rk_modified, atm_tran, fdabsoxy_1992_modified, fdcldabs};
 use smallvec::SmallVec;
 use std::num::NonZeroUsize;
 
@@ -213,9 +219,6 @@ impl RtmInputs {
 
     /// Apply the RTM on the inputs for the given parameters.
     pub fn run(&self, parameters: &RtmParameters) -> RtmOutputs {
-        /// Scaling factor to convert from dB/km to Np/km: `0.1 * ln(10)`
-        const NEP_SCALE: f32 = 0.1 * std::f32::consts::LN_10;
-
         let mut tran = SmallVec::new();
         let mut tb_up = SmallVec::new();
         let mut tb_down = SmallVec::new();
@@ -225,29 +228,13 @@ impl RtmInputs {
             let absorption_profile: SmallVec<[f32; 64]> = (self.surface_index
                 ..self.num_levels.get() + 1)
                 .map(|level_index| {
-                    // Water vapor and oxygen absorption coefficients at this level converted to Np/km
-                    let oxygen = fdabsoxy_1992_modified(
+                    layer_absorption(
                         self.pressure[level_index],
                         self.temperature[level_index],
                         self.vapor_pressure[level_index],
+                        self.rho_l[level_index],
                         freq,
-                    ) * NEP_SCALE;
-                    let water = abh2o_rk_modified(
-                        self.pressure[level_index],
-                        self.temperature[level_index],
-                        self.vapor_pressure[level_index],
-                        freq,
-                    ) * NEP_SCALE;
-
-                    // Cloud absorption coefficient in Np/km
-                    let cloud = if self.rho_l[level_index] > 1.0e-7 {
-                        fdcldabs(freq, self.temperature[level_index], self.rho_l[level_index])
-                    } else {
-                        0.0
-                    };
-
-                    // Total absorption coefficient at this level, converting from Np/km to Np/m
-                    (water + oxygen + cloud) * 1.0e-3
+                    )
                 })
                 .collect();
 
@@ -284,22 +271,4 @@ fn buck_vap(temp: f32) -> f32 {
     // Temperature in degrees Celsius
     let temp_c = temp - 273.15;
     6.1121 * f32::exp((18.678 - temp_c / 234.5) * (temp_c / (257.14 + temp_c)))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use approx::assert_relative_eq;
-
-    /// Check some values for the Buck equation. These are compared against the
-    /// Fortran version.
-    #[test]
-    fn buck_vapor() {
-        let input_temperatures = [273.15, 290., 300., 310.];
-        let expected_outputs = [6.1121, 19.1925564, 35.3524513, 62.2872276];
-
-        for (&temperature, &expected_output) in input_temperatures.iter().zip(&expected_outputs) {
-            assert_relative_eq!(buck_vap(temperature), expected_output);
-        }
-    }
 }
