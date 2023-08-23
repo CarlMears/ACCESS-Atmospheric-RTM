@@ -213,8 +213,8 @@ impl RtmInputs {
 
     /// Apply the RTM on the inputs for the given parameters.
     pub fn run(&self, parameters: &RtmParameters) -> RtmOutputs {
-        // Scaling factor to convert from dB/km to Np/km
-        let nep_scale = 0.1 * f32::ln(10.0);
+        /// Scaling factor to convert from dB/km to Np/km: `0.1 * ln(10)`
+        const NEP_SCALE: f32 = 0.1 * std::f32::consts::LN_10;
 
         let mut tran = SmallVec::new();
         let mut tb_up = SmallVec::new();
@@ -231,13 +231,13 @@ impl RtmInputs {
                         self.temperature[level_index],
                         self.vapor_pressure[level_index],
                         freq,
-                    ) * nep_scale;
+                    ) * NEP_SCALE;
                     let water = abh2o_rk_modified(
                         self.pressure[level_index],
                         self.temperature[level_index],
                         self.vapor_pressure[level_index],
                         freq,
-                    ) * nep_scale;
+                    ) * NEP_SCALE;
 
                     // Cloud absorption coefficient in Np/km
                     let cloud = if self.rho_l[level_index] > 1.0e-7 {
