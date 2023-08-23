@@ -279,7 +279,7 @@ impl RtmInputs {
 /// To convert to water vapor partial pressure, multiply the result by the
 /// relative humidity.
 ///
-/// [1] https://en.wikipedia.org/wiki/Arden_Buck_equation
+/// [1]: https://en.wikipedia.org/wiki/Arden_Buck_equation
 fn buck_vap(temp: f32) -> f32 {
     // Temperature in degrees Celsius
     let temp_c = temp - 273.15;
